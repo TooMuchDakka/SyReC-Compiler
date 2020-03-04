@@ -1,0 +1,146 @@
+// Set the name of your grammar here (and at the end of this grammar):
+COMPILER SyReC
+
+// Add auxiliary methods and declaration here.
+    boolean IsIdentEql(){
+        scanner.ResetPeek();
+        return (la.kind == '$' && scanner.Peek() == _ident && scanner.Peek() == '=');
+    }
+
+    boolean NumberTo(){
+        scanner.ResetPeek();
+        Token x = la;
+        Token next = scanner.Peek();
+        if(la.kind == _int) {
+            return next.kind == "to";
+        }
+        if(la.kind == '#' && next.kind == _ident) {
+            next = scanner.Peek();
+            return next.kind == "to";
+        }
+        if(la.kind == '$' && next.kind == _ident) {
+                    next = scanner.Peek();
+                    return next.kind == "to";
+        }
+        if(la.kind == '(') {
+            int i = 1;
+            while (i > 0) {
+                if(next.kind == '(') {
+                    i++;
+                }
+                else if(next.kind == ')'){
+                    i--;
+                }
+                next = scanner.Peek();
+            }
+            return next.kind == "to";
+        }
+        return false;
+    }
+
+    boolean IsShift(){
+        scanner.ResetPeek();
+        Token x = la;
+        Token next = scanner.Peek();
+        if(la.kind != '(') {
+            return false;
+        }
+            int i = 1;
+            while (i > 0) {
+                if(next.kind == '(') {
+                    i++;
+                }
+                else if(next.kind == ')'){
+                    i--;
+                }
+                else if(i == 1 && (next.kind == "<<" || next.kind ==">>")){
+                    return true;
+                }
+                next = scanner.Peek();
+            }
+            return false;
+    }
+    private static final EnumSet<Token.Kind> enumBinExp = EnumSet.of('+','-','^','*','/','%',"*>","&&","||",'&','|','<','>','=',"!=","<=",">=");
+    boolean IsShift(){
+        scanner.ResetPeek();
+        Token x = la;
+        Token next = scanner.Peek();
+        if(la.kind != '(') {
+            return false;
+        }
+            int i = 1;
+            while (i > 0) {
+                if(next.kind == '(') {
+                    i++;
+                }
+                else if(next.kind == ')'){
+                    i--;
+                }
+                else if(i == 1 && enumBinExp.contains(next.kind)){
+                    return true;
+                }
+                next = scanner.Peek();
+            }
+            return false;
+    }
+// If you want your generated compiler case insensitive add the
+// keyword IGNORECASE here.
+
+CHARACTERS
+    letter = 'A'..'Z' + 'a'..'z'.
+    digit = "0123456789".
+
+
+
+TOKENS
+    ident   =   ('_'|letter) {'_'|letter|digit}.
+    int     =   digit {digit}.
+
+
+
+PRAGMAS
+// Add pragma declarations here.
+// Example:
+//   switch = '$' { digit | letter }. (. Optional semantic action .)
+
+
+COMMENTS FROM "--" TO "\n"
+IGNORE "\r" + "\n" + "\t"
+
+
+PRODUCTIONS
+    number              =   int|'#'ident|'$'ident|('('number('+'|'-'|'*'|'/')number')').
+    //number is a Production and not a Token because it is recursive
+
+    //Program and Modules
+    SyReC               =   Module {Module}.
+    Module              =   "module" ident '(' ParameterList ')' SignalList StatementList.
+    ParameterList       =   Parameter {',' Parameter}.
+    Parameter           =   (|"in"|"out"|"inout") SignalDeclaration.
+    SignalList          =   ("wire"|"state") SignalDeclaration {',' SignalDeclaration}.
+    SignalDeclaration   =   ident {'['int']'}['('int')'].
+
+    //Statements
+    StatementList       =   Statement {';' Statement}.
+    Statement           =   CallStatement | ForStatement | IfStatement | UnaryStatement | SkipStatement | Signal (SwapStatement | AssignStatement).
+    CallStatement       =   ("call"|"uncall") ident '(' ident {',' ident} ')'.
+    ForStatement        =   "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number "to"] number ["step" ['-'] number] StatementList "rof".
+    IfStatement         =   "if" Expression "then" StatementList "else" StatementList "fi" Expression.
+    AssignStatement     =   ('^'|'+'|'-') '=' Signal.
+    UnaryStatement      =   ('~'|"++"|"--") '=' Signal.
+    SwapStatement       =   "<=>" Signal.
+    SkipStatement       =   "skip".
+    Signal              =   ident {'[' Expression ']'} ['.' number [':' number]].
+
+    //Expressions
+    Expression          =   Signal | IF (IsShift()) ShiftExpression | IF (IsBinary())BinaryExpression | UnaryExpression | number.
+    BinaryExpression    =   '(' Expression ('+'|'-'|'^'|'*'|'/'|'%'|"*>"|"&&"|"||"|'&'|'|'|'<'|'>'|'='|"!="|"<="|">=") Expression ')'.
+    UnaryExpression     =   ('!'|'~') Expression.
+    ShiftExpression     =   '(' Expression ("<<"|">>") number ')'.
+
+
+
+
+// End of your compiler specification, make sure the name here matches
+// the grammar name at the start of this grammar.
+END SyReC.
