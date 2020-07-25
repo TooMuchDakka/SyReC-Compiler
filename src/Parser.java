@@ -1,7 +1,7 @@
 
 
 import SymTable.SymTable;
-    import java.util.EnumSet;
+    import java.util.Set;
 
 
 
@@ -9,7 +9,27 @@ public class Parser {
 	public static final int _EOF = 0;
 	public static final int _ident = 1;
 	public static final int _int = 2;
-	public static final int maxT = 54;
+	public static final int _to = 3;
+	public static final int _shiftR = 4;
+	public static final int _shiftL = 5;
+	public static final int _plus = 6;
+	public static final int _minus = 7;
+	public static final int _xor = 8;
+	public static final int _lmul = 9;
+	public static final int _divide = 10;
+	public static final int _rem = 11;
+	public static final int _hmul = 12;
+	public static final int _bitAND = 13;
+	public static final int _bitOR = 14;
+	public static final int _AND = 15;
+	public static final int _OR = 16;
+	public static final int _less = 17;
+	public static final int _greater = 18;
+	public static final int _eql = 19;
+	public static final int _neql = 20;
+	public static final int _leql = 21;
+	public static final int _geql = 22;
+	public static final int maxT = 55;
 
 	static final boolean _T = true;
 	static final boolean _x = false;
@@ -24,7 +44,7 @@ public class Parser {
 
 	boolean IsIdentEql(){
         scanner.ResetPeek();
-        return (la.kind == '$' && scanner.Peek() == _ident && scanner.Peek() == '=');
+        return (la.kind == '$' && scanner.Peek().kind == _ident && scanner.Peek().kind == '=');
     }
 
     boolean NumberTo(){
@@ -32,15 +52,15 @@ public class Parser {
         Token x = la;
         Token next = scanner.Peek();
         if(la.kind == _int) {
-            return next.kind == "to";
+            return next.kind == _to;
         }
         if(la.kind == '#' && next.kind == _ident) {
             next = scanner.Peek();
-            return next.kind == "to";
+            return next.kind == _to;
         }
         if(la.kind == '$' && next.kind == _ident) {
                     next = scanner.Peek();
-                    return next.kind == "to";
+                    return next.kind == _to;
         }
         if(la.kind == '(') {
             int i = 1;
@@ -53,7 +73,7 @@ public class Parser {
                 }
                 next = scanner.Peek();
             }
-            return next.kind == "to";
+            return next.kind == _to;
         }
         return false;
     }
@@ -73,36 +93,36 @@ public class Parser {
                 else if(next.kind == ')'){
                     i--;
                 }
-                else if(i == 1 && (next.kind == "<<" || next.kind ==">>")){
+                else if(i == 1 && (next.kind == _shiftL || next.kind == _shiftR)){
                     return true;
                 }
                 next = scanner.Peek();
             }
             return false;
     }
-    private static final EnumSet<Token.Kind> enumBinExp = EnumSet.of('+','-','^','*','/','%',"*>","&&","||",'&','|','<','>','=',"!=","<=",">=");
-    boolean IsShift(){
-        scanner.ResetPeek();
-        Token x = la;
-        Token next = scanner.Peek();
-        if(la.kind != '(') {
-            return false;
+    private static final Set<Integer> BinExp = Set.of(_plus, _minus, _xor, _lmul, _divide, _rem, _hmul, _bitAND, _bitOR, _AND, _OR, _less, _greater, _eql, _neql, _leql, _geql);
+        boolean IsBinary(){
+            scanner.ResetPeek();
+            Token x = la;
+            Token next = scanner.Peek();
+            if(la.kind != '(') {
+                return false;
+            }
+                int i = 1;
+                while (i > 0) {
+                    if(next.kind == '(') {
+                        i++;
+                    }
+                    else if(next.kind == ')'){
+                        i--;
+                    }
+                    else if(i == 1 && BinExp.contains(next.kind)){
+                        return true;
+                    }
+                    next = scanner.Peek();
+                }
+                return false;
         }
-            int i = 1;
-            while (i > 0) {
-                if(next.kind == '(') {
-                    i++;
-                }
-                else if(next.kind == ')'){
-                    i--;
-                }
-                else if(i == 1 && enumBinExp.contains(next.kind)){
-                    return true;
-                }
-                next = scanner.Peek();
-            }
-            return false;
-    }
 // If you want your generated compiler case insensitive add the
 // keyword IGNORECASE here.
 
@@ -169,64 +189,64 @@ public class Parser {
 	void number() {
 		if (la.kind == 2) {
 			Get();
-		} else if (la.kind == 3) {
+		} else if (la.kind == 23) {
 			Get();
 			Expect(1);
-		} else if (la.kind == 4) {
+		} else if (la.kind == 24) {
 			Get();
 			Expect(1);
-		} else if (la.kind == 5) {
+		} else if (la.kind == 25) {
 			Get();
 			number();
 			if (la.kind == 6) {
 				Get();
 			} else if (la.kind == 7) {
 				Get();
-			} else if (la.kind == 8) {
-				Get();
 			} else if (la.kind == 9) {
 				Get();
-			} else SynErr(55);
+			} else if (la.kind == 10) {
+				Get();
+			} else SynErr(56);
 			number();
-			Expect(10);
-		} else SynErr(56);
+			Expect(26);
+		} else SynErr(57);
 	}
 
 	void SyReC() {
 		SymTable Tab = new SymTable();
 		
 		Module();
-		while (la.kind == 11) {
+		while (la.kind == 27) {
 			Module();
 		}
 	}
 
 	void Module() {
-		Expect(11);
+		Expect(27);
 		Expect(1);
-		Expect(5);
+		Expect(25);
 		ParameterList();
-		Expect(10);
+		Expect(26);
 		SignalList();
 		StatementList();
 	}
 
 	void ParameterList() {
 		Parameter();
-		while (la.kind == 12) {
+		while (la.kind == 28) {
 			Get();
 			Parameter();
 		}
 	}
 
 	void SignalList() {
-		if (la.kind == 16) {
+		if (la.kind == 32) {
 			Get();
-		} else if (la.kind == 17) {
+		} else if (la.kind == 33) {
 			Get();
-		} else SynErr(57);
+		} else SynErr(58);
 		SignalDeclaration();
-		while (la.kind == 12) {
+		while (la.kind == 28) {
 			Get();
 			SignalDeclaration();
 		}
@@ -234,7 +254,7 @@ public class Parser {
 
 	void StatementList() {
 		Statement();
-		while (la.kind == 20) {
+		while (la.kind == 36) {
 			Get();
 			Statement();
 		}
@@ -242,94 +262,94 @@ public class Parser {
 
 	void Parameter() {
 		if (la.kind == 1) {
-		} else if (la.kind == 13) {
+		} else if (la.kind == 29) {
 			Get();
-		} else if (la.kind == 14) {
+		} else if (la.kind == 30) {
 			Get();
-		} else if (la.kind == 15) {
+		} else if (la.kind == 31) {
 			Get();
-		} else SynErr(58);
+		} else SynErr(59);
 		SignalDeclaration();
 	}
 
 	void SignalDeclaration() {
 		Expect(1);
-		while (la.kind == 18) {
+		while (la.kind == 34) {
 			Get();
 			Expect(2);
-			Expect(19);
+			Expect(35);
 		}
-		if (la.kind == 5) {
+		if (la.kind == 25) {
 			Get();
 			Expect(2);
-			Expect(10);
+			Expect(26);
 		}
 	}
 
 	void Statement() {
 		switch (la.kind) {
-		case 21: case 22: {
+		case 37: case 38: {
 			CallStatement();
 			break;
 		}
-		case 23: {
+		case 39: {
 			ForStatement();
 			break;
 		}
-		case 28: {
+		case 42: {
 			IfStatement();
 			break;
 		}
-		case 33: case 34: case 35: {
+		case 46: case 47: case 48: {
 			UnaryStatement();
 			break;
 		}
-		case 37: {
+		case 50: {
 			SkipStatement();
 			break;
 		}
 		case 1: {
 			Signal();
-			if (la.kind == 36) {
+			if (la.kind == 49) {
 				SwapStatement();
-			} else if (la.kind == 6 || la.kind == 7 || la.kind == 32) {
+			} else if (la.kind == 6 || la.kind == 7 || la.kind == 8) {
 				AssignStatement();
-			} else SynErr(59);
+			} else SynErr(60);
 			break;
 		}
-		default: SynErr(60); break;
+		default: SynErr(61); break;
 		}
 	}
 
 	void CallStatement() {
-		if (la.kind == 21) {
+		if (la.kind == 37) {
 			Get();
-		} else if (la.kind == 22) {
+		} else if (la.kind == 38) {
 			Get();
-		} else SynErr(61);
+		} else SynErr(62);
 		Expect(1);
-		Expect(5);
+		Expect(25);
 		Expect(1);
-		while (la.kind == 12) {
+		while (la.kind == 28) {
 			Get();
 			Expect(1);
 		}
-		Expect(10);
+		Expect(26);
 	}
 
 	void ForStatement() {
-		Expect(23);
+		Expect(39);
 		if (IsIdentEql() || NumberTo()) {
 			if (IsIdentEql()) {
-				Expect(4);
-				Expect(1);
 				Expect(24);
+				Expect(1);
+				Expect(19);
 			}
 			number();
-			Expect(25);
+			Expect(3);
 		}
 		number();
-		if (la.kind == 26) {
+		if (la.kind == 40) {
 			Get();
 			if (la.kind == 7) {
 				Get();
@@ -337,47 +357,47 @@ public class Parser {
 			number();
 		}
 		StatementList();
-		Expect(27);
+		Expect(41);
 	}
 
 	void IfStatement() {
-		Expect(28);
+		Expect(42);
 		Expression();
-		Expect(29);
+		Expect(43);
 		StatementList();
-		Expect(30);
+		Expect(44);
 		StatementList();
-		Expect(31);
+		Expect(45);
 		Expression();
 	}
 
 	void UnaryStatement() {
-		if (la.kind == 33) {
+		if (la.kind == 46) {
 			Get();
-		} else if (la.kind == 34) {
+		} else if (la.kind == 47) {
 			Get();
-		} else if (la.kind == 35) {
+		} else if (la.kind == 48) {
 			Get();
-		} else SynErr(62);
-		Expect(24);
+		} else SynErr(63);
+		Expect(19);
 		Signal();
 	}
 
 	void SkipStatement() {
-		Expect(37);
+		Expect(50);
 	}
 
 	void Signal() {
 		Expect(1);
-		while (la.kind == 18) {
+		while (la.kind == 34) {
 			Get();
 			Expression();
-			Expect(19);
+			Expect(35);
 		}
-		if (la.kind == 38) {
+		if (la.kind == 51) {
 			Get();
 			number();
-			if (la.kind == 39) {
+			if (la.kind == 52) {
 				Get();
 				number();
 			}
@@ -385,19 +405,19 @@ public class Parser {
 	}
 
 	void SwapStatement() {
-		Expect(36);
+		Expect(49);
 		Signal();
 	}
 
 	void AssignStatement() {
-		if (la.kind == 32) {
+		if (la.kind == 8) {
 			Get();
 		} else if (la.kind == 6) {
 			Get();
 		} else if (la.kind == 7) {
 			Get();
-		} else SynErr(63);
-		Expect(24);
+		} else SynErr(64);
+		Expect(19);
 		Signal();
 	}
 
@@ -408,27 +428,27 @@ public class Parser {
 			ShiftExpression();
 		} else if (IsBinary()) {
 			BinaryExpression();
-		} else if (la.kind == 33 || la.kind == 51) {
+		} else if (la.kind == 46 || la.kind == 54) {
 			UnaryExpression();
 		} else if (StartOf(1)) {
 			number();
-		} else SynErr(64);
+		} else SynErr(65);
 	}
 
 	void ShiftExpression() {
-		Expect(5);
+		Expect(25);
 		Expression();
-		if (la.kind == 52) {
+		if (la.kind == 5) {
 			Get();
-		} else if (la.kind == 53) {
+		} else if (la.kind == 4) {
 			Get();
-		} else SynErr(65);
+		} else SynErr(66);
 		number();
-		Expect(10);
+		Expect(26);
 	}
 
 	void BinaryExpression() {
-		Expect(5);
+		Expect(25);
 		Expression();
 		switch (la.kind) {
 		case 6: {
@@ -436,10 +456,6 @@ public class Parser {
 			break;
 		}
 		case 7: {
-			Get();
-			break;
-		}
-		case 32: {
 			Get();
 			break;
 		}
@@ -451,66 +467,70 @@ public class Parser {
 			Get();
 			break;
 		}
-		case 40: {
+		case 10: {
 			Get();
 			break;
 		}
-		case 41: {
+		case 11: {
 			Get();
 			break;
 		}
-		case 42: {
+		case 12: {
 			Get();
 			break;
 		}
-		case 43: {
+		case 53: {
 			Get();
 			break;
 		}
-		case 44: {
+		case 14: {
 			Get();
 			break;
 		}
-		case 45: {
+		case 15: {
 			Get();
 			break;
 		}
-		case 46: {
+		case 16: {
 			Get();
 			break;
 		}
-		case 47: {
+		case 17: {
 			Get();
 			break;
 		}
-		case 24: {
+		case 18: {
 			Get();
 			break;
 		}
-		case 48: {
+		case 19: {
 			Get();
 			break;
 		}
-		case 49: {
+		case 20: {
 			Get();
 			break;
 		}
-		case 50: {
+		case 21: {
 			Get();
 			break;
 		}
-		default: SynErr(66); break;
+		case 22: {
+			Get();
+			break;
+		}
+		default: SynErr(67); break;
 		}
 		Expression();
-		Expect(10);
+		Expect(26);
 	}
 
 	void UnaryExpression() {
-		if (la.kind == 51) {
+		if (la.kind == 54) {
 			Get();
-		} else if (la.kind == 33) {
+		} else if (la.kind == 46) {
 			Get();
-		} else SynErr(67);
+		} else SynErr(68);
 		Expression();
 	}
 
@@ -526,8 +546,8 @@ public class Parser {
 	}
 
 	private static final boolean[][] set = {
-		{_T,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x},
-		{_x,_x,_T,_T, _T,_T,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x}
+		{_T,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x},
+		{_x,_x,_T,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_T, _T,_T,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x}
 
 	};
 } // end Parser
@@ -555,71 +575,72 @@ class Errors {
 			case 0: s = "EOF expected"; break;
 			case 1: s = "ident expected"; break;
 			case 2: s = "int expected"; break;
-			case 3: s = "\"#\" expected"; break;
-			case 4: s = "\"$\" expected"; break;
-			case 5: s = "\"(\" expected"; break;
-			case 6: s = "\"+\" expected"; break;
-			case 7: s = "\"-\" expected"; break;
-			case 8: s = "\"*\" expected"; break;
-			case 9: s = "\"/\" expected"; break;
-			case 10: s = "\")\" expected"; break;
-			case 11: s = "\"module\" expected"; break;
-			case 12: s = "\",\" expected"; break;
-			case 13: s = "\"in\" expected"; break;
-			case 14: s = "\"out\" expected"; break;
-			case 15: s = "\"inout\" expected"; break;
-			case 16: s = "\"wire\" expected"; break;
-			case 17: s = "\"state\" expected"; break;
-			case 18: s = "\"[\" expected"; break;
-			case 19: s = "\"]\" expected"; break;
-			case 20: s = "\";\" expected"; break;
-			case 21: s = "\"call\" expected"; break;
-			case 22: s = "\"uncall\" expected"; break;
-			case 23: s = "\"for\" expected"; break;
-			case 24: s = "\"=\" expected"; break;
-			case 25: s = "\"to\" expected"; break;
-			case 26: s = "\"step\" expected"; break;
-			case 27: s = "\"rof\" expected"; break;
-			case 28: s = "\"if\" expected"; break;
-			case 29: s = "\"then\" expected"; break;
-			case 30: s = "\"else\" expected"; break;
-			case 31: s = "\"fi\" expected"; break;
-			case 32: s = "\"^\" expected"; break;
-			case 33: s = "\"~\" expected"; break;
-			case 34: s = "\"++\" expected"; break;
-			case 35: s = "\"--\" expected"; break;
-			case 36: s = "\"<=>\" expected"; break;
-			case 37: s = "\"skip\" expected"; break;
-			case 38: s = "\".\" expected"; break;
-			case 39: s = "\":\" expected"; break;
-			case 40: s = "\"%\" expected"; break;
-			case 41: s = "\"*>\" expected"; break;
-			case 42: s = "\"&&\" expected"; break;
-			case 43: s = "\"||\" expected"; break;
-			case 44: s = "\"&\" expected"; break;
-			case 45: s = "\"|\" expected"; break;
-			case 46: s = "\"<\" expected"; break;
-			case 47: s = "\">\" expected"; break;
-			case 48: s = "\"!=\" expected"; break;
-			case 49: s = "\"<=\" expected"; break;
-			case 50: s = "\">=\" expected"; break;
-			case 51: s = "\"!\" expected"; break;
-			case 52: s = "\"<<\" expected"; break;
-			case 53: s = "\">>\" expected"; break;
-			case 54: s = "??? expected"; break;
-			case 55: s = "invalid number"; break;
+			case 3: s = "to expected"; break;
+			case 4: s = "shiftR expected"; break;
+			case 5: s = "shiftL expected"; break;
+			case 6: s = "plus expected"; break;
+			case 7: s = "minus expected"; break;
+			case 8: s = "xor expected"; break;
+			case 9: s = "lmul expected"; break;
+			case 10: s = "divide expected"; break;
+			case 11: s = "rem expected"; break;
+			case 12: s = "hmul expected"; break;
+			case 13: s = "bitAND expected"; break;
+			case 14: s = "bitOR expected"; break;
+			case 15: s = "AND expected"; break;
+			case 16: s = "OR expected"; break;
+			case 17: s = "less expected"; break;
+			case 18: s = "greater expected"; break;
+			case 19: s = "eql expected"; break;
+			case 20: s = "neql expected"; break;
+			case 21: s = "leql expected"; break;
+			case 22: s = "geql expected"; break;
+			case 23: s = "\"#\" expected"; break;
+			case 24: s = "\"$\" expected"; break;
+			case 25: s = "\"(\" expected"; break;
+			case 26: s = "\")\" expected"; break;
+			case 27: s = "\"module\" expected"; break;
+			case 28: s = "\",\" expected"; break;
+			case 29: s = "\"in\" expected"; break;
+			case 30: s = "\"out\" expected"; break;
+			case 31: s = "\"inout\" expected"; break;
+			case 32: s = "\"wire\" expected"; break;
+			case 33: s = "\"state\" expected"; break;
+			case 34: s = "\"[\" expected"; break;
+			case 35: s = "\"]\" expected"; break;
+			case 36: s = "\";\" expected"; break;
+			case 37: s = "\"call\" expected"; break;
+			case 38: s = "\"uncall\" expected"; break;
+			case 39: s = "\"for\" expected"; break;
+			case 40: s = "\"step\" expected"; break;
+			case 41: s = "\"rof\" expected"; break;
+			case 42: s = "\"if\" expected"; break;
+			case 43: s = "\"then\" expected"; break;
+			case 44: s = "\"else\" expected"; break;
+			case 45: s = "\"fi\" expected"; break;
+			case 46: s = "\"~\" expected"; break;
+			case 47: s = "\"++\" expected"; break;
+			case 48: s = "\"--\" expected"; break;
+			case 49: s = "\"<=>\" expected"; break;
+			case 50: s = "\"skip\" expected"; break;
+			case 51: s = "\".\" expected"; break;
+			case 52: s = "\":\" expected"; break;
+			case 53: s = "\"&&\" expected"; break;
+			case 54: s = "\"!\" expected"; break;
+			case 55: s = "??? expected"; break;
 			case 56: s = "invalid number"; break;
-			case 57: s = "invalid SignalList"; break;
-			case 58: s = "invalid Parameter"; break;
-			case 59: s = "invalid Statement"; break;
+			case 57: s = "invalid number"; break;
+			case 58: s = "invalid SignalList"; break;
+			case 59: s = "invalid Parameter"; break;
 			case 60: s = "invalid Statement"; break;
-			case 61: s = "invalid CallStatement"; break;
-			case 62: s = "invalid UnaryStatement"; break;
-			case 63: s = "invalid AssignStatement"; break;
-			case 64: s = "invalid Expression"; break;
-			case 65: s = "invalid ShiftExpression"; break;
-			case 66: s = "invalid BinaryExpression"; break;
-			case 67: s = "invalid UnaryExpression"; break;
+			case 61: s = "invalid Statement"; break;
+			case 62: s = "invalid CallStatement"; break;
+			case 63: s = "invalid UnaryStatement"; break;
+			case 64: s = "invalid AssignStatement"; break;
+			case 65: s = "invalid Expression"; break;
+			case 66: s = "invalid ShiftExpression"; break;
+			case 67: s = "invalid BinaryExpression"; break;
+			case 68: s = "invalid UnaryExpression"; break;
 			default: s = "error " + n; break;
 		}
 		printMsg(line, col, s);

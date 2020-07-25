@@ -1,6 +1,6 @@
 // Set the name of your grammar here (and at the end of this grammar):
     import SymTable.SymTable;
-    import java.util.EnumSet;
+    import java.util.Set;
 
 COMPILER SyReC
 
@@ -10,7 +10,7 @@ COMPILER SyReC
 
     boolean IsIdentEql(){
         scanner.ResetPeek();
-        return (la.kind == '$' && scanner.Peek() == _ident && scanner.Peek() == '=');
+        return (la.kind == '$' && scanner.Peek().kind == _ident && scanner.Peek().kind == '=');
     }
 
     boolean NumberTo(){
@@ -18,15 +18,15 @@ COMPILER SyReC
         Token x = la;
         Token next = scanner.Peek();
         if(la.kind == _int) {
-            return next.kind == "to";
+            return next.kind == _to;
         }
         if(la.kind == '#' && next.kind == _ident) {
             next = scanner.Peek();
-            return next.kind == "to";
+            return next.kind == _to;
         }
         if(la.kind == '$' && next.kind == _ident) {
                     next = scanner.Peek();
-                    return next.kind == "to";
+                    return next.kind == _to;
         }
         if(la.kind == '(') {
             int i = 1;
@@ -39,7 +39,7 @@ COMPILER SyReC
                 }
                 next = scanner.Peek();
             }
-            return next.kind == "to";
+            return next.kind == _to;
         }
         return false;
     }
@@ -59,36 +59,36 @@ COMPILER SyReC
                 else if(next.kind == ')'){
                     i--;
                 }
-                else if(i == 1 && (next.kind == "<<" || next.kind ==">>")){
+                else if(i == 1 && (next.kind == _shiftL || next.kind == _shiftR)){
                     return true;
                 }
                 next = scanner.Peek();
             }
             return false;
     }
-    private static final EnumSet<Token.Kind> enumBinExp = EnumSet.of('+','-','^','*','/','%',"*>","&&","||",'&','|','<','>','=',"!=","<=",">=");
-    boolean IsShift(){
-        scanner.ResetPeek();
-        Token x = la;
-        Token next = scanner.Peek();
-        if(la.kind != '(') {
-            return false;
+    private static final Set<Integer> BinExp = Set.of(_plus, _minus, _xor, _lmul, _divide, _rem, _hmul, _bitAND, _bitOR, _AND, _OR, _less, _greater, _eql, _neql, _leql, _geql);
+        boolean IsBinary(){
+            scanner.ResetPeek();
+            Token x = la;
+            Token next = scanner.Peek();
+            if(la.kind != '(') {
+                return false;
+            }
+                int i = 1;
+                while (i > 0) {
+                    if(next.kind == '(') {
+                        i++;
+                    }
+                    else if(next.kind == ')'){
+                        i--;
+                    }
+                    else if(i == 1 && BinExp.contains(next.kind)){
+                        return true;
+                    }
+                    next = scanner.Peek();
+                }
+                return false;
         }
-            int i = 1;
-            while (i > 0) {
-                if(next.kind == '(') {
-                    i++;
-                }
-                else if(next.kind == ')'){
-                    i--;
-                }
-                else if(i == 1 && enumBinExp.contains(next.kind)){
-                    return true;
-                }
-                next = scanner.Peek();
-            }
-            return false;
-    }
 // If you want your generated compiler case insensitive add the
 // keyword IGNORECASE here.
 
@@ -101,6 +101,26 @@ CHARACTERS
 TOKENS
     ident   =   ('_'|letter) {'_'|letter|digit}.
     int     =   digit {digit}.
+    to      =   "to". //for LookAhead in ForStatement
+    shiftR  =   ">>". //for LookAhead  in Expression (shift vs Binary)
+    shiftL  =   "<<".
+    plus    =   '+'. // to differentiate between Expression and number
+    minus   =   '-'.
+    xor     =   '^'.
+    lmul    =   '*'.
+    divide  =   '/'.
+    rem     =   '%'.
+    hmul    =   "*>".
+    bitAND  =   "&%".
+    bitOR   =   "||".
+    AND     =   '&'.
+    OR      =   '|'.
+    less    =   '<'.
+    greater =   '>'.
+    eql     =   '='.
+    neql    =   "!=".
+    leql    =   "<=".
+    geql    =   ">=".
 
 
 
@@ -133,7 +153,7 @@ PRODUCTIONS
     StatementList       =   Statement {';' Statement}.
     Statement           =   CallStatement | ForStatement | IfStatement | UnaryStatement | SkipStatement | Signal (SwapStatement | AssignStatement).
     CallStatement       =   ("call"|"uncall") ident '(' ident {',' ident} ')'.
-    ForStatement        =   "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number "to"] number ["step" ['-'] number] StatementList "rof".
+    ForStatement        =   "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number to] number ["step" ['-'] number] StatementList "rof".
     IfStatement         =   "if" Expression "then" StatementList "else" StatementList "fi" Expression.
     AssignStatement     =   ('^'|'+'|'-') '=' Signal.
     UnaryStatement      =   ('~'|"++"|"--") '=' Signal.
@@ -145,7 +165,7 @@ PRODUCTIONS
     Expression          =   Signal | IF (IsShift()) ShiftExpression | IF (IsBinary())BinaryExpression | UnaryExpression | number.
     BinaryExpression    =   '(' Expression ('+'|'-'|'^'|'*'|'/'|'%'|"*>"|"&&"|"||"|'&'|'|'|'<'|'>'|'='|"!="|"<="|">=") Expression ')'.
     UnaryExpression     =   ('!'|'~') Expression.
-    ShiftExpression     =   '(' Expression ("<<"|">>") number ')'.
+    ShiftExpression     =   '(' Expression (shiftL|shiftR) number ')'.
 
 
 
