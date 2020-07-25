@@ -1,5 +1,10 @@
 
 
+import SymTable.SymTable;
+    import java.util.EnumSet;
+
+
+
 public class Parser {
 	public static final int _EOF = 0;
 	public static final int _ident = 1;
@@ -188,6 +193,8 @@ public class Parser {
 	}
 
 	void SyReC() {
+		SymTable Tab = new SymTable();
+		
 		Module();
 		while (la.kind == 11) {
 			Module();

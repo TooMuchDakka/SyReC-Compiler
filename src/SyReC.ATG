@@ -1,7 +1,13 @@
 // Set the name of your grammar here (and at the end of this grammar):
+    import SymTable.SymTable;
+    import java.util.EnumSet;
+
 COMPILER SyReC
 
 // Add auxiliary methods and declaration here.
+
+
+
     boolean IsIdentEql(){
         scanner.ResetPeek();
         return (la.kind == '$' && scanner.Peek() == _ident && scanner.Peek() == '=');
@@ -113,7 +119,10 @@ PRODUCTIONS
     //number is a Production and not a Token because it is recursive
 
     //Program and Modules
-    SyReC               =   Module {Module}.
+    SyReC               =   (.//Start of Parsing
+                            SymTable Tab = new SymTable();
+                            .)
+                            Module {Module}.
     Module              =   "module" ident '(' ParameterList ')' SignalList StatementList.
     ParameterList       =   Parameter {',' Parameter}.
     Parameter           =   (|"in"|"out"|"inout") SignalDeclaration.
