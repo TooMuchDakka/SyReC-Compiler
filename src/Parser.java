@@ -123,6 +123,7 @@ public class Parser {
                 }
                 return false;
         }
+        SymTable tab = new SymTable();
 // If you want your generated compiler case insensitive add the
 // keyword IGNORECASE here.
 
@@ -213,8 +214,6 @@ public class Parser {
 	}
 
 	void SyReC() {
-		SymTable Tab = new SymTable();
-		
 		Module();
 		while (la.kind == 27) {
 			Module();
@@ -224,6 +223,10 @@ public class Parser {
 	void Module() {
 		Expect(27);
 		Expect(1);
+		if(tab.addModule(t.val)) {
+		   SemErr("Module "+t.val+" is already defined");
+		}
+		
 		Expect(25);
 		ParameterList();
 		Expect(26);

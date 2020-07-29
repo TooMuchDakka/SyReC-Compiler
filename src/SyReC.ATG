@@ -89,6 +89,8 @@ COMPILER SyReC
                 }
                 return false;
         }
+        SymTable tab = new SymTable();
+        Mod curMod;
 // If you want your generated compiler case insensitive add the
 // keyword IGNORECASE here.
 
@@ -139,11 +141,15 @@ PRODUCTIONS
     //number is a Production and not a Token because it is recursive
 
     //Program and Modules
-    SyReC               =   (.//Start of Parsing
-                            SymTable Tab = new SymTable();
-                            .)
-                            Module {Module}.
-    Module              =   "module" ident '(' ParameterList ')' SignalList StatementList.
+    SyReC               =   Module {Module}.
+
+    Module              =   "module" ident              (.//add module to SymTable
+                                                        if(!tab.addModule(t.val)) {
+                                                            SemErr("Module "+t.val+" is already defined");
+                                                        }
+                                                        curMod = tab.getModule(t.val);
+                                                        .)
+                            '(' ParameterList ')' SignalList StatementList.
     ParameterList       =   Parameter {',' Parameter}.
     Parameter           =   (|"in"|"out"|"inout") SignalDeclaration.
     SignalList          =   ("wire"|"state") SignalDeclaration {',' SignalDeclaration}.
