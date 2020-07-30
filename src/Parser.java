@@ -127,6 +127,10 @@ public class Parser {
         }
         SymTable tab = new SymTable();
         Mod curMod;
+
+        public void Warning (String msg) { //add Warning as function to not need to specify line and col
+        		errors.Warning(t.line, t.col, msg);
+        	}
 // If you want your generated compiler case insensitive add the
 // keyword IGNORECASE here.
 
@@ -342,13 +346,23 @@ public class Parser {
 			Get();
 		} else SynErr(62);
 		Expect(1);
+		Mod calledMod = tab.getModule(t.val);
+		if(calledMod == null) {
+		 Warning("Module "+t.val+"was not defined before this point");
+		}
+		
 		Expect(25);
 		Expect(1);
+		int parCount = 1;
 		while (la.kind == 28) {
 			Get();
 			Expect(1);
+			parCount++;
 		}
 		Expect(26);
+		if(calledMod != null && parCount != calledMod.getParameterCount()) {
+		 SemErr("Module "+calledMod.name+"needs a different amount of parameters");
+		}
 	}
 
 	void ForStatement() {
@@ -403,6 +417,9 @@ public class Parser {
 
 	void Signal() {
 		Expect(1);
+		if(!curMod.isDefined(t.val)) {
+		 SemErr("Signal "+t.val+" is not defined");
+		}
 		while (la.kind == 34) {
 			Get();
 			Expression();

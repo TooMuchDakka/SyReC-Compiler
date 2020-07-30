@@ -93,6 +93,10 @@ COMPILER SyReC
         }
         SymTable tab = new SymTable();
         Mod curMod;
+
+        public void Warning (String msg) { //add Warning as function to not need to specify line and col
+        		errors.Warning(t.line, t.col, msg);
+        	}
 // If you want your generated compiler case insensitive add the
 // keyword IGNORECASE here.
 
@@ -170,14 +174,27 @@ PRODUCTIONS
     //Statements
     StatementList       =   Statement {';' Statement}.
     Statement           =   CallStatement | ForStatement | IfStatement | UnaryStatement | SkipStatement | Signal (SwapStatement | AssignStatement).
-    CallStatement       =   ("call"|"uncall") ident '(' ident {',' ident} ')'.
+    CallStatement       =   ("call"|"uncall") ident     (.Mod calledMod = tab.getModule(t.val);
+                                                        if(calledMod == null) {
+                                                            Warning("Module "+t.val+"was not defined before this point");
+                                                        }
+                                                        .)
+                            '(' ident                   (.int parCount = 1;.)
+                            {',' ident                  (.parCount++;.)
+                            } ')'                       (.if(calledMod != null && parCount != calledMod.getParameterCount()) {
+                                                            SemErr("Module "+calledMod.name+"needs a different amount of parameters");
+                                                        }.)
+                            .
     ForStatement        =   "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number to] number ["step" ['-'] number] StatementList "rof".
     IfStatement         =   "if" Expression "then" StatementList "else" StatementList "fi" Expression.
     AssignStatement     =   ('^'|'+'|'-') '=' Signal.
     UnaryStatement      =   ('~'|"++"|"--") '=' Signal.
     SwapStatement       =   "<=>" Signal.
     SkipStatement       =   "skip".
-    Signal              =   ident {'[' Expression ']'} ['.' number [':' number]].
+    Signal              =   ident                       (.if(!curMod.isDefined(t.val)) {
+                                                            SemErr("Signal "+t.val+" is not defined");
+                                                          }.)
+                            {'[' Expression ']'} ['.' number [':' number]].
 
     //Expressions
     Expression          =   Signal | IF (IsShift()) ShiftExpression | IF (IsBinary())BinaryExpression | UnaryExpression | number.
