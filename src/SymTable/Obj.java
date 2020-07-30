@@ -1,6 +1,6 @@
 package SymTable;
 
-public abstract class Obj {
+public class Obj {
     public enum Kind {
         In, Out, Inout, Wire, State
     }

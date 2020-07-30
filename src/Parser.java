@@ -2,6 +2,8 @@
 
 import SymTable.SymTable;
     import java.util.Set;
+    import SymTable.Obj;
+    import SymTable.Mod;
 
 
 
@@ -124,6 +126,7 @@ public class Parser {
                 return false;
         }
         SymTable tab = new SymTable();
+        Mod curMod;
 // If you want your generated compiler case insensitive add the
 // keyword IGNORECASE here.
 
@@ -223,9 +226,10 @@ public class Parser {
 	void Module() {
 		Expect(27);
 		Expect(1);
-		if(tab.addModule(t.val)) {
+		if(!tab.addModule(t.val)) {
 		   SemErr("Module "+t.val+" is already defined");
 		}
+		curMod = tab.getModule(t.val);
 		
 		Expect(25);
 		ParameterList();
@@ -243,15 +247,18 @@ public class Parser {
 	}
 
 	void SignalList() {
+		Obj.Kind kind = null;
 		if (la.kind == 32) {
 			Get();
+			kind = Obj.Kind.Wire;
 		} else if (la.kind == 33) {
 			Get();
+			kind = Obj.Kind.State;
 		} else SynErr(58);
-		SignalDeclaration();
+		SignalDeclaration(kind);
 		while (la.kind == 28) {
 			Get();
-			SignalDeclaration();
+			SignalDeclaration(kind);
 		}
 	}
 
@@ -264,19 +271,23 @@ public class Parser {
 	}
 
 	void Parameter() {
-		if (la.kind == 1) {
-		} else if (la.kind == 29) {
+		Obj.Kind kind = null;
+		if (la.kind == 29) {
 			Get();
+			kind = Obj.Kind.In;
 		} else if (la.kind == 30) {
 			Get();
+			kind = Obj.Kind.Out;
 		} else if (la.kind == 31) {
 			Get();
+			kind = Obj.Kind.Inout;
 		} else SynErr(59);
-		SignalDeclaration();
+		SignalDeclaration(kind);
 	}
 
-	void SignalDeclaration() {
+	void SignalDeclaration(Obj.Kind kind) {
 		Expect(1);
+		curMod.addObj(new Obj(kind, t.val));
 		while (la.kind == 34) {
 			Get();
 			Expect(2);

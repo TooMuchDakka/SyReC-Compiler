@@ -1,6 +1,8 @@
 // Set the name of your grammar here (and at the end of this grammar):
     import SymTable.SymTable;
     import java.util.Set;
+    import SymTable.Obj;
+    import SymTable.Mod;
 
 COMPILER SyReC
 
@@ -151,9 +153,19 @@ PRODUCTIONS
                                                         .)
                             '(' ParameterList ')' SignalList StatementList.
     ParameterList       =   Parameter {',' Parameter}.
-    Parameter           =   (|"in"|"out"|"inout") SignalDeclaration.
-    SignalList          =   ("wire"|"state") SignalDeclaration {',' SignalDeclaration}.
-    SignalDeclaration   =   ident {'['int']'}['('int')'].
+    Parameter           =                               (.Obj.Kind kind = null;.)
+                            ("in"                       (.kind = Obj.Kind.In;.)
+                            |"out"                      (.kind = Obj.Kind.Out;.)
+                            |"inout"                    (.kind = Obj.Kind.Inout;.)
+                            ) SignalDeclaration<kind>.
+    SignalList          =                               (.Obj.Kind kind = null;.)
+                            ("wire"                     (.kind = Obj.Kind.Wire;.)
+                            |"state"                    (.kind = Obj.Kind.State;.)
+                            ) SignalDeclaration<kind> {',' SignalDeclaration<kind>}.
+
+
+    SignalDeclaration<Obj.Kind kind>   =   ident        (.curMod.addObj(new Obj(kind, t.val));.)
+                                           {'['int']'}['('int')'].
 
     //Statements
     StatementList       =   Statement {';' Statement}.
