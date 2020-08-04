@@ -6,8 +6,7 @@ import java.util.Map;
 public class Mod {
 
     public final String name;
-    private int inCount = 0; //count number of signals (for REAL format)
-    private int outCount = 0; //if not equal circuit is not reversible
+    private int signalCount = 0; //count number of signals (for REAL format)
     private int parameterCount = 0; //count parameters cor call
 
     private Map<String, Obj> locals = Collections.emptyMap();
@@ -20,11 +19,8 @@ public class Mod {
         if(locals.containsKey(obj.name)) {
             return false;
         }
-        if(obj.kind == Obj.Kind.In || obj.kind == Obj.Kind.Inout) {
-            inCount++;
-        }
-        if(obj.kind == Obj.Kind.Out || obj.kind == Obj.Kind.Inout) {
-            outCount++;
+        if(obj.kind == Obj.Kind.In || obj.kind == Obj.Kind.Inout || obj.kind == Obj.Kind.Out) {
+            signalCount++;
         }
         if(obj.kind != Obj.Kind.Wire && obj.kind != Obj.Kind.State) {
             parameterCount++;
@@ -33,9 +29,6 @@ public class Mod {
         return true;
     }
 
-    public boolean inOutBalanced() {
-        return inCount == outCount;
-    }
 
     public boolean isDefined(String name) {
         return locals.containsKey(name);
@@ -43,6 +36,8 @@ public class Mod {
 
     public int getParameterCount() {
         return parameterCount;
-    }
+    } //return just the parameters
+
+    public int getLineCount() {return signalCount+parameterCount;} //return parameters+lines needed for wires
 
 }

@@ -4,6 +4,7 @@ import SymTable.SymTable;
     import java.util.Set;
     import SymTable.Obj;
     import SymTable.Mod;
+    import CodeGen.Code;
 
 
 
@@ -44,12 +45,12 @@ public class Parser {
 	public Scanner scanner;
 	public Errors errors;
 
-	boolean IsIdentEql(){
+	private boolean IsIdentEql(){
         scanner.ResetPeek();
         return (la.kind == '$' && scanner.Peek().kind == _ident && scanner.Peek().kind == '=');
     }
 
-    boolean NumberTo(){
+    private boolean NumberTo(){
         scanner.ResetPeek();
         Token x = la;
         Token next = scanner.Peek();
@@ -80,7 +81,7 @@ public class Parser {
         return false;
     }
 
-    boolean IsShift(){
+    private boolean IsShift(){
         scanner.ResetPeek();
         Token x = la;
         Token next = scanner.Peek();
@@ -128,7 +129,14 @@ public class Parser {
         SymTable tab = new SymTable();
         Mod curMod;
 
-        public void Warning (String msg) { //add Warning as function to not need to specify line and col
+        private String fileName = null;
+        public void setName(String name){
+            fileName = name;
+        }
+        Code codegen = new Code(fileName);
+
+
+        private void Warning (String msg) { //add Warning as function to not need to specify line and col
         		errors.Warning(t.line, t.col, msg);
         	}
 // If you want your generated compiler case insensitive add the
