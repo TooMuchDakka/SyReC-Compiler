@@ -6,9 +6,7 @@ import SymTable.Obj;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.file.*;
 import java.util.Map;
 
 public class Code {
@@ -16,8 +14,8 @@ public class Code {
     Path curPath;
     BufferedWriter curWriter;
 
-    public Code(String fileName) {
-        curPath = Path.of(".", fileName);
+    public Code(String folderName) {
+        curPath = Path.of(folderName);
         try {
             Files.createDirectory(curPath);
         } catch (FileAlreadyExistsException ee) {
@@ -34,7 +32,7 @@ public class Code {
             e.printStackTrace();
         }
         try {
-            curWriter = Files.newBufferedWriter(Path.of(curPath.toString(), module.name+".real"));
+            curWriter = Files.newBufferedWriter(Path.of(curPath.toString(), module.name+".real"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         } catch (IOException e) {
             e.printStackTrace();
             return;
@@ -83,6 +81,15 @@ public class Code {
             curWriter.newLine();
             curWriter.append(".begin");
             curWriter.newLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void endModule(Mod module)  {
+        try {
+            curWriter.append(".end");
+            curWriter.close();
         } catch (IOException e) {
             e.printStackTrace();
         }

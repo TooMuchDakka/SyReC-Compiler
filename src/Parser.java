@@ -133,7 +133,7 @@ public class Parser {
         Code codegen = null;
         public void setName(String name){
             fileName = name;
-            Code codegen = new Code(fileName);
+            codegen = new Code(fileName);
         }
 
 
@@ -251,6 +251,7 @@ public class Parser {
 		SignalList();
 		codegen.createModule(curMod);
 		StatementList();
+		codegen.endModule(curMod);
 	}
 
 	void ParameterList() {

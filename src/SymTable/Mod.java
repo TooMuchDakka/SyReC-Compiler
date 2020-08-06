@@ -1,6 +1,7 @@
 package SymTable;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 public class Mod {
@@ -9,7 +10,7 @@ public class Mod {
     private int signalCount = 0; //count number of signals (for REAL format)
     private int parameterCount = 0; //count parameters cor call
 
-    private Map<String, Obj> locals = Collections.emptyMap();
+    private Map<String, Obj> locals = new HashMap<String, Obj>();
 
     public Mod(String name) {
         this.name = name;

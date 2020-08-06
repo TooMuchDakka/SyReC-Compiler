@@ -1,11 +1,12 @@
 package SymTable;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 public class SymTable {
 
-    private Map<String, Mod> modules = Collections.emptyMap();
+    private Map<String, Mod> modules = new HashMap<String, Mod>();
 
     public boolean addModule(String name) {
         if(modules.containsKey(name)) {

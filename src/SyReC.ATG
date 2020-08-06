@@ -99,7 +99,7 @@ COMPILER SyReC
         Code codegen = null;
         public void setName(String name){
             fileName = name;
-            Code codegen = new Code(fileName);
+            codegen = new Code(fileName);
         }
 
 
@@ -166,7 +166,7 @@ PRODUCTIONS
                                                         curMod = tab.getModule(t.val);
                                                         .)
                             '(' ParameterList ')' SignalList (.codegen.createModule(curMod);.)
-                            StatementList.
+                            StatementList               (.codegen.endModule(curMod);.).
     ParameterList       =   Parameter {',' Parameter}.
     Parameter           =                               (.Obj.Kind kind = null;.)
                             ("in"                       (.kind = Obj.Kind.In;.)
