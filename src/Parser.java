@@ -249,6 +249,7 @@ public class Parser {
 		ParameterList();
 		Expect(26);
 		SignalList();
+		codegen.createModule(curMod);
 		StatementList();
 	}
 

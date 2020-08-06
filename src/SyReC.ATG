@@ -165,7 +165,8 @@ PRODUCTIONS
                                                         }
                                                         curMod = tab.getModule(t.val);
                                                         .)
-                            '(' ParameterList ')' SignalList StatementList.
+                            '(' ParameterList ')' SignalList (.codegen.createModule(curMod);.)
+                            StatementList.
     ParameterList       =   Parameter {',' Parameter}.
     Parameter           =                               (.Obj.Kind kind = null;.)
                             ("in"                       (.kind = Obj.Kind.In;.)
