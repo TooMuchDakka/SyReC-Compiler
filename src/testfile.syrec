@@ -1,0 +1,4 @@
+module testmodule1 (in a, in b, out c)
+    wire d,e,f
+
+module testmodule2 (inout a, out b)
