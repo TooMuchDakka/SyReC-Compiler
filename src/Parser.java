@@ -130,10 +130,12 @@ public class Parser {
         Mod curMod;
 
         private String fileName = null;
+        Code codegen = null;
         public void setName(String name){
             fileName = name;
+            Code codegen = new Code(fileName);
         }
-        Code codegen = new Code(fileName);
+
 
 
         private void Warning (String msg) { //add Warning as function to not need to specify line and col
