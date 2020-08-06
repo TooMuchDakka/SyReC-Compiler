@@ -40,4 +40,8 @@ public class Mod {
 
     public int getLineCount() {return signalCount+parameterCount;} //return parameters+lines needed for wires
 
+    public Obj[] getLines() {
+        return locals.values().toArray(new Obj[0]); //return an Array of the Objects (Lines/Parameters) of the module
+    }
+
 }
