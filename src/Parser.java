@@ -248,7 +248,9 @@ public class Parser {
 		Expect(25);
 		ParameterList();
 		Expect(26);
-		SignalList();
+		while (la.kind == 32 || la.kind == 33) {
+			SignalList();
+		}
 		codegen.createModule(curMod);
 		StatementList();
 		codegen.endModule(curMod);
