@@ -341,11 +341,11 @@ public class Parser {
 			break;
 		}
 		case 1: {
-			Signal();
+			String firstIdent = Signal();
 			if (la.kind == 49) {
-				SwapStatement();
+				SwapStatement(firstIdent);
 			} else if (la.kind == 6 || la.kind == 7 || la.kind == 8) {
-				AssignStatement();
+				AssignStatement(firstIdent);
 			} else SynErr(60);
 			break;
 		}
@@ -375,7 +375,7 @@ public class Parser {
 		}
 		Expect(26);
 		if(calledMod != null && parCount != calledMod.getParameterCount()) {
-		 SemErr("Module "+calledMod.name+"needs a different amount of parameters");
+		 SemErr("Module "+calledMod.name+"needs "+calledMod.getParameterCount()+" parameters");
 		}
 	}
 
@@ -422,15 +422,17 @@ public class Parser {
 			Get();
 		} else SynErr(63);
 		Expect(19);
-		Signal();
+		String ident = Signal();
 	}
 
 	void SkipStatement() {
 		Expect(50);
 	}
 
-	void Signal() {
+	String  Signal() {
+		String  ident;
 		Expect(1);
+		ident = t.val;
 		if(!curMod.isDefined(t.val)) {
 		 SemErr("Signal "+t.val+" is not defined");
 		}
@@ -447,14 +449,15 @@ public class Parser {
 				number();
 			}
 		}
+		return ident;
 	}
 
-	void SwapStatement() {
+	void SwapStatement(String firstIdent) {
 		Expect(49);
-		Signal();
+		String ident = Signal();
 	}
 
-	void AssignStatement() {
+	void AssignStatement(String firstIdent) {
 		if (la.kind == 8) {
 			Get();
 		} else if (la.kind == 6) {
@@ -463,12 +466,12 @@ public class Parser {
 			Get();
 		} else SynErr(64);
 		Expect(19);
-		Signal();
+		String secondIdent = Signal();
 	}
 
 	void Expression() {
 		if (la.kind == 1) {
-			Signal();
+			String ident = Signal();
 		} else if (IsShift()) {
 			ShiftExpression();
 		} else if (IsBinary()) {

@@ -184,7 +184,7 @@ PRODUCTIONS
 
     //Statements
     StatementList       =   Statement {';' Statement}.
-    Statement           =   CallStatement | ForStatement | IfStatement | UnaryStatement | SkipStatement | Signal (SwapStatement | AssignStatement).
+    Statement           =   CallStatement | ForStatement | IfStatement | UnaryStatement | SkipStatement | Signal<out String firstIdent> (SwapStatement<firstIdent> | AssignStatement<firstIdent>).
     CallStatement       =   ("call"|"uncall") ident     (.Mod calledMod = tab.getModule(t.val);
                                                         if(calledMod == null) {
                                                             Warning("Module "+t.val+"was not defined before this point");
@@ -193,22 +193,24 @@ PRODUCTIONS
                             '(' ident                   (.int parCount = 1;.)
                             {',' ident                  (.parCount++;.)
                             } ')'                       (.if(calledMod != null && parCount != calledMod.getParameterCount()) {
-                                                            SemErr("Module "+calledMod.name+"needs a different amount of parameters");
+                                                            SemErr("Module "+calledMod.name+"needs "+calledMod.getParameterCount()+" parameters");
                                                         }.)
                             .
     ForStatement        =   "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number to] number ["step" ['-'] number] StatementList "rof".
     IfStatement         =   "if" Expression "then" StatementList "else" StatementList "fi" Expression.
-    AssignStatement     =   ('^'|'+'|'-') '=' Signal.
-    UnaryStatement      =   ('~'|"++"|"--") '=' Signal.
-    SwapStatement       =   "<=>" Signal.
+    AssignStatement<String firstIdent>     =   ('^'|'+'|'-') '=' Signal<out String secondIdent>.
+    UnaryStatement      =   ('~'|"++"|"--") '=' Signal<out String ident>.
+    SwapStatement<String firstIdent>       =   "<=>" Signal<out String ident>.
     SkipStatement       =   "skip".
-    Signal              =   ident                       (.if(!curMod.isDefined(t.val)) {
-                                                            SemErr("Signal "+t.val+" is not defined");
-                                                          }.)
+    //placeholder, needs to be updated to allow arrays and width
+    Signal<out String ident>              =   ident         (.ident = t.val;
+                                                            if(!curMod.isDefined(t.val)) {
+                                                                SemErr("Signal "+t.val+" is not defined");
+                                                            }.)
                             {'[' Expression ']'} ['.' number [':' number]].
 
     //Expressions
-    Expression          =   Signal | IF (IsShift()) ShiftExpression | IF (IsBinary())BinaryExpression | UnaryExpression | number.
+    Expression          =   Signal<out String ident> | IF (IsShift()) ShiftExpression | IF (IsBinary())BinaryExpression | UnaryExpression | number.
     BinaryExpression    =   '(' Expression ('+'|'-'|'^'|'*'|'/'|'%'|"*>"|"&&"|"||"|'&'|'|'|'<'|'>'|'='|"!="|"<="|">=") Expression ')'.
     UnaryExpression     =   ('!'|'~') Expression.
     ShiftExpression     =   '(' Expression (shiftL|shiftR) number ')'.
