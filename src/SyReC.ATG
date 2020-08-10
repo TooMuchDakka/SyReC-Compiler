@@ -200,7 +200,7 @@ PRODUCTIONS
     IfStatement         =   "if" Expression "then" StatementList "else" StatementList "fi" Expression.
     AssignStatement<String firstIdent>     =   ('^'|'+'|'-') '=' Signal<out String secondIdent>.
     UnaryStatement      =   ('~'|"++"|"--") '=' Signal<out String ident>.
-    SwapStatement<String firstIdent>       =   "<=>" Signal<out String ident>.
+    SwapStatement<String firstIdent>       =   "<=>" Signal<out String secondIdent> (.codegen.swap(firstIdent, secondIdent);.).
     SkipStatement       =   "skip".
     //placeholder, needs to be updated to allow arrays and width
     Signal<out String ident>              =   ident         (.ident = t.val;

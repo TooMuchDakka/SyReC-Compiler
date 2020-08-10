@@ -95,5 +95,15 @@ public class Code {
         }
     }
 
+    //swap of two signals
+    public void swap(String firstSignal, String secondSignal) {
+        try {
+            curWriter.append("f2 ").append(firstSignal).append(" ").append(secondSignal);
+            curWriter.newLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 
 }

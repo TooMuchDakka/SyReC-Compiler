@@ -1,4 +1,8 @@
 module testmodule1 (in a, in b, out c)
     wire d,e,f
+	a <=> b;
+	b <=> d;
+	f <=> c
 
 module testmodule2 (inout a, out b)
+	a <=> b

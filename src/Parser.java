@@ -454,7 +454,8 @@ public class Parser {
 
 	void SwapStatement(String firstIdent) {
 		Expect(49);
-		String ident = Signal();
+		String secondIdent = Signal();
+		codegen.swap(firstIdent, secondIdent);
 	}
 
 	void AssignStatement(String firstIdent) {
