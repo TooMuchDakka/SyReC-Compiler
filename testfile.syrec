@@ -1,8 +1,12 @@
-module testmodule1 (in a, in b, out c)
+module testmodule1 (in a(3), in b(3), out c)
     wire d,e,f
 	a <=> b;
-	b <=> d;
-	f <=> c
+	c <=> d;
+	a.1 <=> b.2;
+	f <=> c;
+	a.2:3 <=> b.1:2
+	
+	
 
 module testmodule2 (inout a, out b)
 	a <=> b

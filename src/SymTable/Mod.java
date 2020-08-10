@@ -39,7 +39,13 @@ public class Mod {
         return parameterCount;
     } //return just the parameters
 
-    public int getLineCount() {return signalCount+parameterCount;} //return parameters+lines needed for wires
+    public int getLineCount() { //return parameters+lines needed for wires (width is used in this calculation
+        int count = 0;
+        for (Obj signal: getLines()) {
+            count+=signal.width;
+        }
+        return count;
+    } 
 
     public Obj[] getLines() {
         return locals.values().toArray(new Obj[0]); //return an Array of the Objects (Lines/Parameters) of the module

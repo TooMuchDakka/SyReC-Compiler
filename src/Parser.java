@@ -407,6 +407,7 @@ public class Parser {
 		Expect(26);
 		if(calledMod != null && parCount != calledMod.getParameterCount()) {
 		 SemErr("Module "+calledMod.name+"needs "+calledMod.getParameterCount()+" parameters");
+		 //Errorcheck for correct width needed
 		}
 	}
 
@@ -481,6 +482,8 @@ public class Parser {
 			 SemErr("Signal out of bounds: "+lowerBound);
 			}
 			sig.startWidth = lowerBound;
+			sig.endWidth = lowerBound; //so far both are equal
+			
 			if (la.kind == 52) {
 				Get();
 				int uperBound = number();
@@ -496,7 +499,12 @@ public class Parser {
 	void SwapStatement(SignalObject firstSig) {
 		Expect(49);
 		SignalObject secondSig = Signal();
+		if(firstSig.getWidth() != secondSig.getWidth() ){
+		SemErr("Signal Width is not equal");
+		}
+		else {
 		codegen.swap(firstSig, secondSig);
+		}
 	}
 
 	void AssignStatement(SignalObject firstSignal) {

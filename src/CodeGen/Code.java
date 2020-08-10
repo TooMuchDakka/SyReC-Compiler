@@ -7,6 +7,7 @@ import SymTable.Obj;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.*;
+import java.util.Collections;
 import java.util.Map;
 
 public class Code {
@@ -53,7 +54,12 @@ public class Code {
             Obj[] lines = module.getLines();
             curWriter.append(".variables ");
             for (Obj line : lines) {
-                curWriter.append(line.name).append(" "); //write each variable
+                if(line.width == 1) {
+                    curWriter.append(line.name).append(" "); //write each variable
+                }
+                else for(int i = 0; i < line.width; i++) {
+                    curWriter.append(line.name).append("_").append(String.valueOf(i)).append(" "); //write all subvariables of the width
+                }
             }
             //we leave out inputs and outputs as these are optional and not specified in SyReC
             curWriter.newLine();
@@ -61,10 +67,10 @@ public class Code {
             for (Obj line : lines) {
                 if(line.kind == Obj.Kind.Wire || line.kind == Obj.Kind.Out) {
                     //Wires and Out are Constant 0 Input
-                    curWriter.append('0');
+                    curWriter.append(String.join("", Collections.nCopies(line.width, "0")));
                 }
                 else {
-                    curWriter.append('-');
+                    curWriter.append(String.join("", Collections.nCopies(line.width, "-")));
                 }
             }
             curWriter.newLine();
@@ -72,10 +78,10 @@ public class Code {
             for (Obj line : lines) {
                 if(line.kind == Obj.Kind.Wire || line.kind == Obj.Kind.In) {
                     //Wires and Out are Constant 0 Input
-                    curWriter.append('1');
+                    curWriter.append(String.join("", Collections.nCopies(line.width, "1")));
                 }
                 else {
-                    curWriter.append('-');
+                    curWriter.append(String.join("", Collections.nCopies(line.width, "-")));
                 }
             }
             curWriter.newLine();
@@ -96,10 +102,23 @@ public class Code {
     }
 
     //swap of two signals
+    //function is only called if the width is equal
     public void swap(SignalObject firstSignal, SignalObject secondSignal) {
         try {
-            curWriter.append("f2 ").append(firstSignal.ident).append(" ").append(secondSignal.ident);
-            curWriter.newLine();
+            for(int i = 0; i <= firstSignal.endWidth-firstSignal.startWidth; i++) {
+                curWriter.append("f2 ").append(firstSignal.ident);
+                if(firstSignal.isBus) {
+                    curWriter.append("_").append(String.valueOf(i+firstSignal.startWidth));
+                }
+                curWriter.append(" ").append(secondSignal.ident);
+                if(secondSignal.isBus) {
+                    curWriter.append("_").append(String.valueOf(i+secondSignal.startWidth));
+                }
+                curWriter.newLine();
+            }
+
+
+
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -224,13 +224,20 @@ PRODUCTIONS
                             {',' ident                  (.parCount++;.)
                             } ')'                       (.if(calledMod != null && parCount != calledMod.getParameterCount()) {
                                                             SemErr("Module "+calledMod.name+"needs "+calledMod.getParameterCount()+" parameters");
+                                                            //Errorcheck for correct width needed
                                                         }.)
                             .
     ForStatement        =   "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number<out int start> "to"] number<out int stop> ["step" ['-'] number<out int stepsize>] StatementList "rof".
     IfStatement         =   "if" Expression "then" StatementList "else" StatementList "fi" Expression.
     AssignStatement<SignalObject firstSignal>     =   ('^'|'+'|'-') '=' Signal<out SignalObject secondSig>.
     UnaryStatement      =   ('~'|"++"|"--") '=' Signal<out SignalObject sig>.
-    SwapStatement<SignalObject firstSig>       =   "<=>" Signal<out SignalObject secondSig> (.codegen.swap(firstSig, secondSig);.).
+    SwapStatement<SignalObject firstSig>       =   "<=>" Signal<out SignalObject secondSig>
+                                                        (. if(firstSig.getWidth() != secondSig.getWidth() ){
+                                                            SemErr("Signal Width is not equal");
+                                                        }
+                                                        else {
+                                                            codegen.swap(firstSig, secondSig);
+                                                        }.).
     SkipStatement       =   "skip".
     //placeholder, needs to be updated to allow arrays and width
     Signal<out SignalObject sig>              =   ident         (.String ident = t.val;
@@ -243,7 +250,9 @@ PRODUCTIONS
                             ['.' number<out int lowerBound> (.if(lowerBound > curSignal.width) {
                                                                 SemErr("Signal out of bounds: "+lowerBound);
                                                             }
-                                                            sig.startWidth = lowerBound;.)
+                                                            sig.startWidth = lowerBound;
+                                                            sig.endWidth = lowerBound; //so far both are equal
+                                                            .)
                             [':' number<out int uperBound>  (.if(uperBound > curSignal.width) {
                                                                 SemErr("Signal out of bounds: "+uperBound);
                                                             }
