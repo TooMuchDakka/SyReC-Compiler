@@ -96,9 +96,9 @@ public class Code {
     }
 
     //swap of two signals
-    public void swap(String firstSignal, String secondSignal) {
+    public void swap(SignalObject firstSignal, SignalObject secondSignal) {
         try {
-            curWriter.append("f2 ").append(firstSignal).append(" ").append(secondSignal);
+            curWriter.append("f2 ").append(firstSignal.ident).append(" ").append(secondSignal.ident);
             curWriter.newLine();
         } catch (IOException e) {
             e.printStackTrace();

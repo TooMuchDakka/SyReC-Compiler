@@ -4,6 +4,7 @@
     import SymTable.Obj;
     import SymTable.Mod;
     import CodeGen.Code;
+    import CodeGen.SignalObject;
 
 COMPILER SyReC
 
@@ -153,7 +154,32 @@ IGNORE "\r" + "\n" + "\t"
 
 
 PRODUCTIONS
-    number              =   int|'#'ident|'$'ident|('('number('+'|'-'|'*'|'/')number')').
+    number<out int number>              =   (.number = 0;.)(int         (.number = Integer.parseInt(t.val);.)
+                                            |'#'ident   (.number = curMod.getLocal(t.val).width;.)
+                                            |'$'ident   //placeholder for loops
+                                            |('('number<out int firstNumber> (.char calcToggle = '0';.)
+                                            ('+'        (.calcToggle = '+';.)
+                                            |'-'        (.calcToggle = '-';.)
+                                            |'*'        (.calcToggle = '*';.)
+                                            |'/'       (.calcToggle = '/';.)
+                                            ) number<out int secondNumber>      (.switch(calcToggle) {
+                                                                case '+':
+                                                                    number = firstNumber+secondNumber;
+                                                                    break;
+                                                                case '-':
+                                                                    number = firstNumber-secondNumber;
+                                                                    break;
+                                                                case '*':
+                                                                   number = firstNumber*secondNumber;
+                                                                    break;
+                                                                case '/':
+                                                                    number = firstNumber/secondNumber;
+                                                                    break;
+                                                                default:
+                                                                    number = 0;
+                                                                    break;
+                                                        }.)
+                                            ')')).
     //number is a Production and not a Token because it is recursive
 
     //Program and Modules
@@ -179,12 +205,16 @@ PRODUCTIONS
                             ) SignalDeclaration<kind> {',' SignalDeclaration<kind>}.
 
 
-    SignalDeclaration<Obj.Kind kind>   =   ident        (.curMod.addObj(new Obj(kind, t.val));.)
-                                           {'['int']'}['('int')'].
+    SignalDeclaration<Obj.Kind kind>   =   ident        (.String ident = t.val;
+                                                        int width = 1;.)
+                                           {'['int']'}
+                                           ['('int      (.width = Integer.parseInt(t.val);.)
+                                           ')']
+                                           (.curMod.addObj(new Obj(kind, ident, width));.).
 
     //Statements
     StatementList       =   Statement {';' Statement}.
-    Statement           =   CallStatement | ForStatement | IfStatement | UnaryStatement | SkipStatement | Signal<out String firstIdent> (SwapStatement<firstIdent> | AssignStatement<firstIdent>).
+    Statement           =   CallStatement | ForStatement | IfStatement | UnaryStatement | SkipStatement | Signal<out SignalObject firstSig> (SwapStatement<firstSig> | AssignStatement<firstSig>).
     CallStatement       =   ("call"|"uncall") ident     (.Mod calledMod = tab.getModule(t.val);
                                                         if(calledMod == null) {
                                                             Warning("Module "+t.val+"was not defined before this point");
@@ -196,24 +226,35 @@ PRODUCTIONS
                                                             SemErr("Module "+calledMod.name+"needs "+calledMod.getParameterCount()+" parameters");
                                                         }.)
                             .
-    ForStatement        =   "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number to] number ["step" ['-'] number] StatementList "rof".
+    ForStatement        =   "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number<out int start> "to"] number<out int stop> ["step" ['-'] number<out int stepsize>] StatementList "rof".
     IfStatement         =   "if" Expression "then" StatementList "else" StatementList "fi" Expression.
-    AssignStatement<String firstIdent>     =   ('^'|'+'|'-') '=' Signal<out String secondIdent>.
-    UnaryStatement      =   ('~'|"++"|"--") '=' Signal<out String ident>.
-    SwapStatement<String firstIdent>       =   "<=>" Signal<out String secondIdent> (.codegen.swap(firstIdent, secondIdent);.).
+    AssignStatement<SignalObject firstSignal>     =   ('^'|'+'|'-') '=' Signal<out SignalObject secondSig>.
+    UnaryStatement      =   ('~'|"++"|"--") '=' Signal<out SignalObject sig>.
+    SwapStatement<SignalObject firstSig>       =   "<=>" Signal<out SignalObject secondSig> (.codegen.swap(firstSig, secondSig);.).
     SkipStatement       =   "skip".
     //placeholder, needs to be updated to allow arrays and width
-    Signal<out String ident>              =   ident         (.ident = t.val;
-                                                            if(!curMod.isDefined(t.val)) {
-                                                                SemErr("Signal "+t.val+" is not defined");
-                                                            }.)
-                            {'[' Expression ']'} ['.' number [':' number]].
+    Signal<out SignalObject sig>              =   ident         (.String ident = t.val;
+                                                            if(!curMod.isDefined(ident)) {
+                                                                SemErr("Signal "+ident+" is not defined");
+                                                            }
+                                                            Obj curSignal = curMod.getLocal(ident);
+                                                            sig = new SignalObject (curSignal);.)
+                            {'[' Expression ']'}
+                            ['.' number<out int lowerBound> (.if(lowerBound > curSignal.width) {
+                                                                SemErr("Signal out of bounds: "+lowerBound);
+                                                            }
+                                                            sig.startWidth = lowerBound;.)
+                            [':' number<out int uperBound>  (.if(uperBound > curSignal.width) {
+                                                                SemErr("Signal out of bounds: "+uperBound);
+                                                            }
+                                                            sig.endWidth = uperBound;.)
+                            ]].
 
     //Expressions
-    Expression          =   Signal<out String ident> | IF (IsShift()) ShiftExpression | IF (IsBinary())BinaryExpression | UnaryExpression | number.
+    Expression          =   Signal<out SignalObject sig> | IF (IsShift()) ShiftExpression | IF (IsBinary())BinaryExpression | UnaryExpression | number<out int number>.
     BinaryExpression    =   '(' Expression ('+'|'-'|'^'|'*'|'/'|'%'|"*>"|"&&"|"||"|'&'|'|'|'<'|'>'|'='|"!="|"<="|">=") Expression ')'.
     UnaryExpression     =   ('!'|'~') Expression.
-    ShiftExpression     =   '(' Expression (shiftL|shiftR) number ')'.
+    ShiftExpression     =   '(' Expression (shiftL|shiftR) number<out int number> ')'.
 
 
 

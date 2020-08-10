@@ -5,6 +5,7 @@ import SymTable.SymTable;
     import SymTable.Obj;
     import SymTable.Mod;
     import CodeGen.Code;
+    import CodeGen.SignalObject;
 
 
 
@@ -204,30 +205,57 @@ public class Parser {
 		}
 	}
 	
-	void number() {
+	int  number() {
+		int  number;
+		number = 0;
 		if (la.kind == 2) {
 			Get();
+			number = Integer.parseInt(t.val);
 		} else if (la.kind == 23) {
 			Get();
 			Expect(1);
+			number = curMod.getLocal(t.val).width;
 		} else if (la.kind == 24) {
 			Get();
 			Expect(1);
 		} else if (la.kind == 25) {
 			Get();
-			number();
+			int firstNumber = number();
+			char calcToggle = '0';
 			if (la.kind == 6) {
 				Get();
+				calcToggle = '+';
 			} else if (la.kind == 7) {
 				Get();
+				calcToggle = '-';
 			} else if (la.kind == 9) {
 				Get();
+				calcToggle = '*';
 			} else if (la.kind == 10) {
 				Get();
+				calcToggle = '/';
 			} else SynErr(56);
-			number();
+			int secondNumber = number();
+			switch(calcToggle) {
+			case '+':
+			number = firstNumber+secondNumber;
+			break;
+			case '-':
+			number = firstNumber-secondNumber;
+			break;
+			case '*':
+			number = firstNumber*secondNumber;
+			break;
+			case '/':
+			number = firstNumber/secondNumber;
+			break;
+			default:
+			number = 0;
+			break;
+			}
 			Expect(26);
 		} else SynErr(57);
+		return number;
 	}
 
 	void SyReC() {
@@ -305,7 +333,8 @@ public class Parser {
 
 	void SignalDeclaration(Obj.Kind kind) {
 		Expect(1);
-		curMod.addObj(new Obj(kind, t.val));
+		String ident = t.val;
+		int width = 1;
 		while (la.kind == 34) {
 			Get();
 			Expect(2);
@@ -314,8 +343,10 @@ public class Parser {
 		if (la.kind == 25) {
 			Get();
 			Expect(2);
+			width = Integer.parseInt(t.val);
 			Expect(26);
 		}
+		curMod.addObj(new Obj(kind, ident, width));
 	}
 
 	void Statement() {
@@ -341,11 +372,11 @@ public class Parser {
 			break;
 		}
 		case 1: {
-			String firstIdent = Signal();
+			SignalObject firstSig = Signal();
 			if (la.kind == 49) {
-				SwapStatement(firstIdent);
+				SwapStatement(firstSig);
 			} else if (la.kind == 6 || la.kind == 7 || la.kind == 8) {
-				AssignStatement(firstIdent);
+				AssignStatement(firstSig);
 			} else SynErr(60);
 			break;
 		}
@@ -387,16 +418,16 @@ public class Parser {
 				Expect(1);
 				Expect(19);
 			}
-			number();
+			int start = number();
 			Expect(3);
 		}
-		number();
+		int stop = number();
 		if (la.kind == 40) {
 			Get();
 			if (la.kind == 7) {
 				Get();
 			}
-			number();
+			int stepsize = number();
 		}
 		StatementList();
 		Expect(41);
@@ -422,20 +453,22 @@ public class Parser {
 			Get();
 		} else SynErr(63);
 		Expect(19);
-		String ident = Signal();
+		SignalObject sig = Signal();
 	}
 
 	void SkipStatement() {
 		Expect(50);
 	}
 
-	String  Signal() {
-		String  ident;
+	SignalObject  Signal() {
+		SignalObject  sig;
 		Expect(1);
-		ident = t.val;
-		if(!curMod.isDefined(t.val)) {
-		 SemErr("Signal "+t.val+" is not defined");
+		String ident = t.val;
+		if(!curMod.isDefined(ident)) {
+		SemErr("Signal "+ident+" is not defined");
 		}
+		Obj curSignal = curMod.getLocal(ident);
+		sig = new SignalObject (curSignal);
 		while (la.kind == 34) {
 			Get();
 			Expression();
@@ -443,22 +476,30 @@ public class Parser {
 		}
 		if (la.kind == 51) {
 			Get();
-			number();
+			int lowerBound = number();
+			if(lowerBound > curSignal.width) {
+			 SemErr("Signal out of bounds: "+lowerBound);
+			}
+			sig.startWidth = lowerBound;
 			if (la.kind == 52) {
 				Get();
-				number();
+				int uperBound = number();
+				if(uperBound > curSignal.width) {
+				 SemErr("Signal out of bounds: "+uperBound);
+				}
+				sig.endWidth = uperBound;
 			}
 		}
-		return ident;
+		return sig;
 	}
 
-	void SwapStatement(String firstIdent) {
+	void SwapStatement(SignalObject firstSig) {
 		Expect(49);
-		String secondIdent = Signal();
-		codegen.swap(firstIdent, secondIdent);
+		SignalObject secondSig = Signal();
+		codegen.swap(firstSig, secondSig);
 	}
 
-	void AssignStatement(String firstIdent) {
+	void AssignStatement(SignalObject firstSignal) {
 		if (la.kind == 8) {
 			Get();
 		} else if (la.kind == 6) {
@@ -467,12 +508,12 @@ public class Parser {
 			Get();
 		} else SynErr(64);
 		Expect(19);
-		String secondIdent = Signal();
+		SignalObject secondSig = Signal();
 	}
 
 	void Expression() {
 		if (la.kind == 1) {
-			String ident = Signal();
+			SignalObject sig = Signal();
 		} else if (IsShift()) {
 			ShiftExpression();
 		} else if (IsBinary()) {
@@ -480,7 +521,7 @@ public class Parser {
 		} else if (la.kind == 46 || la.kind == 54) {
 			UnaryExpression();
 		} else if (StartOf(1)) {
-			number();
+			int number = number();
 		} else SynErr(65);
 	}
 
@@ -492,7 +533,7 @@ public class Parser {
 		} else if (la.kind == 4) {
 			Get();
 		} else SynErr(66);
-		number();
+		int number = number();
 		Expect(26);
 	}
 

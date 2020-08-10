@@ -45,4 +45,11 @@ public class Mod {
         return locals.values().toArray(new Obj[0]); //return an Array of the Objects (Lines/Parameters) of the module
     }
 
+    public Obj getLocal(String name) {
+        if(!isDefined(name)) {
+            return null;
+        }
+        return new Obj(locals.get(name));
+    }
+
 }
