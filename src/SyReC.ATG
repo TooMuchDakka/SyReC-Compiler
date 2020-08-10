@@ -247,13 +247,13 @@ PRODUCTIONS
                                                             Obj curSignal = curMod.getLocal(ident);
                                                             sig = new SignalObject (curSignal);.)
                             {'[' Expression ']'}
-                            ['.' number<out int lowerBound> (.if(lowerBound > curSignal.width) {
+                            ['.' number<out int lowerBound> (.if(lowerBound > curSignal.width || lowerBound < 0) {
                                                                 SemErr("Signal out of bounds: "+lowerBound);
                                                             }
                                                             sig.startWidth = lowerBound;
                                                             sig.endWidth = lowerBound; //so far both are equal
                                                             .)
-                            [':' number<out int uperBound>  (.if(uperBound > curSignal.width) {
+                            [':' number<out int uperBound>  (.if(uperBound > curSignal.width || uperBound < 0) {
                                                                 SemErr("Signal out of bounds: "+uperBound);
                                                             }
                                                             sig.endWidth = uperBound;.)

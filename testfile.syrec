@@ -4,7 +4,8 @@ module testmodule1 (in a(3), in b(3), out c)
 	c <=> d;
 	a.1 <=> b.2;
 	f <=> c;
-	a.2:3 <=> b.1:2
+	a.2:3 <=> b.1:2;
+	f <=> b.1:1
 	
 	
 

@@ -478,7 +478,7 @@ public class Parser {
 		if (la.kind == 51) {
 			Get();
 			int lowerBound = number();
-			if(lowerBound > curSignal.width) {
+			if(lowerBound > curSignal.width || lowerBound < 0) {
 			 SemErr("Signal out of bounds: "+lowerBound);
 			}
 			sig.startWidth = lowerBound;
@@ -487,7 +487,7 @@ public class Parser {
 			if (la.kind == 52) {
 				Get();
 				int uperBound = number();
-				if(uperBound > curSignal.width) {
+				if(uperBound > curSignal.width || uperBound < 0) {
 				 SemErr("Signal out of bounds: "+uperBound);
 				}
 				sig.endWidth = uperBound;
