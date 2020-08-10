@@ -105,15 +105,22 @@ public class Code {
     //function is only called if the width is equal
     public void swap(SignalObject firstSignal, SignalObject secondSignal) {
         try {
-            for(int i = 0; i <= firstSignal.endWidth-firstSignal.startWidth; i++) {
+            for(int i = 0; i < firstSignal.getWidth(); i++) {
                 curWriter.append("f2 ").append(firstSignal.ident);
-                if(firstSignal.isBus) {
-                    curWriter.append("_").append(String.valueOf(i+firstSignal.startWidth));
+                if(firstSignal.isBus && firstSignal.isAscending()) {
+                    curWriter.append("_").append(String.valueOf(i+firstSignal.getStartWidth()));
+                }
+                if(firstSignal.isBus && !firstSignal.isAscending()) {
+                    curWriter.append("_").append(String.valueOf(firstSignal.getStartWidth()-i));
                 }
                 curWriter.append(" ").append(secondSignal.ident);
-                if(secondSignal.isBus) {
-                    curWriter.append("_").append(String.valueOf(i+secondSignal.startWidth));
+                if(secondSignal.isBus && secondSignal.isAscending()) {
+                    curWriter.append("_").append(String.valueOf(i+secondSignal.getStartWidth()));
                 }
+                if(secondSignal.isBus && !secondSignal.isAscending()) {
+                    curWriter.append("_").append(String.valueOf(secondSignal.getStartWidth()-i));
+                }
+
                 curWriter.newLine();
             }
 

@@ -478,19 +478,19 @@ public class Parser {
 		if (la.kind == 51) {
 			Get();
 			int lowerBound = number();
-			if(lowerBound > curSignal.width || lowerBound < 0) {
+			if(lowerBound >= curSignal.width || lowerBound < 0) {
 			 SemErr("Signal out of bounds: "+lowerBound);
 			}
-			sig.startWidth = lowerBound;
-			sig.endWidth = lowerBound; //so far both are equal
+			sig.setStartWidth(lowerBound);
+			sig.setEndWidth(lowerBound); //so far both are equal
 			
 			if (la.kind == 52) {
 				Get();
 				int uperBound = number();
-				if(uperBound > curSignal.width || uperBound < 0) {
+				if(uperBound >= curSignal.width || uperBound < 0) {
 				 SemErr("Signal out of bounds: "+uperBound);
 				}
-				sig.endWidth = uperBound;
+				sig.setEndWidth(uperBound);
 			}
 		}
 		return sig;
