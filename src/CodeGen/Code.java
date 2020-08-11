@@ -103,33 +103,74 @@ public class Code {
 
     //swap of two signals
     //function is only called if the width is equal
-    public void swap(SignalObject firstSignal, SignalObject secondSignal) {
+    public void swap(SignalObject firstSig, SignalObject secondSig) {
         try {
-            for(int i = 0; i < firstSignal.getWidth(); i++) {
-                curWriter.append("f2 ").append(firstSignal.ident);
-                if(firstSignal.isBus && firstSignal.isAscending()) {
-                    curWriter.append("_").append(String.valueOf(i+firstSignal.getStartWidth()));
-                }
-                if(firstSignal.isBus && !firstSignal.isAscending()) {
-                    curWriter.append("_").append(String.valueOf(firstSignal.getStartWidth()-i));
-                }
-                curWriter.append(" ").append(secondSignal.ident);
-                if(secondSignal.isBus && secondSignal.isAscending()) {
-                    curWriter.append("_").append(String.valueOf(i+secondSignal.getStartWidth()));
-                }
-                if(secondSignal.isBus && !secondSignal.isAscending()) {
-                    curWriter.append("_").append(String.valueOf(secondSignal.getStartWidth()-i));
-                }
-
+            for(int i = 0; i < firstSig.getWidth(); i++) {
+                curWriter.append("f2 ").append(firstSig.ident);
+                appendBus(firstSig, i);
+                curWriter.append(" ").append(secondSig.ident);
+                appendBus(secondSig, i);
                 curWriter.newLine();
             }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
-
-
+    //negate given Signal
+    public void not(SignalObject sig) {
+        try {
+            for(int i = 0; i < sig.getWidth(); i++) {
+                curWriter.append("t1 ").append(sig.ident);
+                appendBus(sig, i);
+                curWriter.newLine();
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
 
+
+    //appends the correct index to a BusSignal
+    private void appendBus(SignalObject sig, int i) throws IOException {
+        if(sig.isBus && sig.isAscending()) {
+            curWriter.append("_").append(String.valueOf(i+sig.getStartWidth()));
+        }
+        if(sig.isBus && !sig.isAscending()) {
+            curWriter.append("_").append(String.valueOf(sig.getStartWidth()-i));
+        }
+    }
+
+    //++= Statement
+    public void plusplus(SignalObject sig) {
+        try {
+            for(int i = sig.getWidth()-1; i >= 0; i--) {
+                curWriter.append("t").append(String.valueOf(i+1));
+                for(int j = 0; j <= i; j++) {
+                    curWriter.append(" ").append(sig.ident);
+                    appendBus(sig, j);
+                }
+                curWriter.newLine();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    //--= Statement, basically plusplus but in reverse
+    public void minusminus(SignalObject sig) {
+        try {
+            for(int i = 0; i < sig.getWidth(); i++) {
+                curWriter.append("t").append(String.valueOf(i+1));
+                for(int j = 0; j <= i; j++) {
+                    curWriter.append(" ").append(sig.ident);
+                    appendBus(sig, j);
+                }
+                curWriter.newLine();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

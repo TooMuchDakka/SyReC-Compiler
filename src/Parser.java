@@ -221,20 +221,16 @@ public class Parser {
 		} else if (la.kind == 25) {
 			Get();
 			int firstNumber = number();
-			char calcToggle = '0';
 			if (la.kind == 6) {
 				Get();
-				calcToggle = '+';
 			} else if (la.kind == 7) {
 				Get();
-				calcToggle = '-';
 			} else if (la.kind == 9) {
 				Get();
-				calcToggle = '*';
 			} else if (la.kind == 10) {
 				Get();
-				calcToggle = '/';
 			} else SynErr(56);
+			char calcToggle = t.val.charAt(0);
 			int secondNumber = number();
 			switch(calcToggle) {
 			case '+':
@@ -453,8 +449,20 @@ public class Parser {
 		} else if (la.kind == 48) {
 			Get();
 		} else SynErr(63);
+		String calcToggle = t.val;
 		Expect(19);
 		SignalObject sig = Signal();
+		switch(calcToggle) {
+		 case "~":
+		     codegen.not(sig);
+		     break;
+		 case "++":
+		     codegen.plusplus(sig);
+		     break;
+		 default:
+		     codegen.minusminus(sig);
+		     break;
+		}
 	}
 
 	void SkipStatement() {

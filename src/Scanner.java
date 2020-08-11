@@ -382,7 +382,7 @@ public class Scanner {
 	boolean Comment0() {
 		int level = 1, pos0 = pos, line0 = line, col0 = col, charPos0 = charPos;
 		NextCh();
-		if (ch == '-') {
+		if (ch == '/') {
 			NextCh();
 			for(;;) {
 				if (ch == 10) {
@@ -412,7 +412,7 @@ public class Scanner {
 		while (ch == ' ' ||
 			ch >= 9 && ch <= 10 || ch == 13
 		) NextCh();
-		if (ch == '-' && Comment0()) return NextToken();
+		if (ch == '/' && Comment0()) return NextToken();
 		int recKind = noSym;
 		int recEnd = pos;
 		t = new Token();

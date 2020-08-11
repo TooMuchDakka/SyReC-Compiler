@@ -149,20 +149,17 @@ PRAGMAS
 //   switch = '$' { digit | letter }. (. Optional semantic action .)
 
 
-COMMENTS FROM "--" TO "\n"
+COMMENTS FROM "//" TO "\n"
 IGNORE "\r" + "\n" + "\t"
 
 
 PRODUCTIONS
     number<out int number>              =   (.number = 0;.)(int         (.number = Integer.parseInt(t.val);.)
-                                            |'#'ident   (.number = curMod.getLocal(t.val).width;.)
+                                            |'#'ident                   (.number = curMod.getLocal(t.val).width;.)
                                             |'$'ident   //placeholder for loops
-                                            |('('number<out int firstNumber> (.char calcToggle = '0';.)
-                                            ('+'        (.calcToggle = '+';.)
-                                            |'-'        (.calcToggle = '-';.)
-                                            |'*'        (.calcToggle = '*';.)
-                                            |'/'       (.calcToggle = '/';.)
-                                            ) number<out int secondNumber>      (.switch(calcToggle) {
+                                            |('('number<out int firstNumber> ('+'|'-'|'*'|'/')
+                                                                        (.char calcToggle = t.val.charAt(0);.)
+                                            number<out int secondNumber>      (.switch(calcToggle) {
                                                                 case '+':
                                                                     number = firstNumber+secondNumber;
                                                                     break;
@@ -230,7 +227,22 @@ PRODUCTIONS
     ForStatement        =   "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number<out int start> "to"] number<out int stop> ["step" ['-'] number<out int stepsize>] StatementList "rof".
     IfStatement         =   "if" Expression "then" StatementList "else" StatementList "fi" Expression.
     AssignStatement<SignalObject firstSignal>     =   ('^'|'+'|'-') '=' Signal<out SignalObject secondSig>.
-    UnaryStatement      =   ('~'|"++"|"--") '=' Signal<out SignalObject sig>.
+
+    UnaryStatement      =   ('~'|"++"|"--")             (.String calcToggle = t.val;.)
+                            '=' Signal<out SignalObject sig>
+                                                        (.switch(calcToggle) {
+                                                            case "~":
+                                                                codegen.not(sig);
+                                                                break;
+                                                            case "++":
+                                                                codegen.plusplus(sig);
+                                                                break;
+                                                            default:
+                                                                codegen.minusminus(sig);
+                                                                break;
+                                                        }.)
+                            .
+
     SwapStatement<SignalObject firstSig>       =   "<=>" Signal<out SignalObject secondSig>
                                                         (. if(firstSig.getWidth() != secondSig.getWidth() ){
                                                             SemErr("Signal Width is not equal");
