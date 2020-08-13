@@ -226,7 +226,7 @@ PRODUCTIONS
                             .
     ForStatement        =   "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number<out int start> "to"] number<out int stop> ["step" ['-'] number<out int stepsize>] StatementList "rof".
     IfStatement         =   "if" Expression "then" StatementList "else" StatementList "fi" Expression.
-    AssignStatement<SignalObject firstSignal>     =   ('^'|'+'|'-') '=' Signal<out SignalObject secondSig>.
+    AssignStatement<SignalObject firstSignal>     =   ('^'|'+'|'-') '=' Expression.
 
     UnaryStatement      =   ('~'|"++"|"--")             (.String calcToggle = t.val;.)
                             '=' Signal<out SignalObject sig>

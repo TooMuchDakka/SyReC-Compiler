@@ -524,7 +524,7 @@ public class Parser {
 			Get();
 		} else SynErr(64);
 		Expect(19);
-		SignalObject secondSig = Signal();
+		Expression();
 	}
 
 	void Expression() {
