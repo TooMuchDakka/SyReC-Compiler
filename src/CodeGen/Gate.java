@@ -10,7 +10,7 @@ public class Gate {
     }
     public final Kind kind; //which Gate this object describes
     private final ArrayList<String> controlLines; //the signals used to control this gate
-    public final ArrayList<String> targetLines;
+    private final ArrayList<String> targetLines;
 
     public Gate(Kind kind) {
         this.kind = kind;
@@ -23,7 +23,7 @@ public class Gate {
     }
 
     public void addTargetLines(ArrayList<String> targetLines) {
-        this.controlLines.addAll(targetLines);
+        this.targetLines.addAll(targetLines);
     }
 
     public ArrayList<String> getControlLines() {

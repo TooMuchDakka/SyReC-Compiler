@@ -4,22 +4,31 @@ import SymTable.Obj;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 public class CodeMod {
     //A Dataobject to hold the Code representation of a module
     private final String name;
-    private final ArrayList<Obj> variables;
+    private final HashMap<String, Obj> variables;
     private final ArrayList<Gate> gates;
 
     public CodeMod(String name) {
         this.name = name;
-        variables = new ArrayList<Obj>();
+        variables = new HashMap<String, Obj>();
         gates = new ArrayList<Gate>();
     }
 
-    public void addWire(String ident) {
-        //TODO add Wire i.e. for Expressions
+    public void addVariables(Obj singleVariable) {
+        variables.put(singleVariable.name, singleVariable);
+    }
+
+    public void addVariables(HashMap<String, Obj> variables) {
+        this.variables.putAll(variables);
+    }
+
+    public HashMap<String, Obj> getVariables() {
+        return new HashMap<String, Obj>(variables);
     }
 
     public void addGate (Gate.Kind kind, String targetLine) {
@@ -56,12 +65,20 @@ public class CodeMod {
         gates.add(gate);
     }
 
+    public ArrayList<Gate> getGates() {
+        return new ArrayList<>(gates);
+    }
+
     public int getLastGateNumber() {
         return gates.size()-1;
     }
 
-    public int getVarCount() {
-        return variables.size();
+    public int getVarCount() { //return parameters+lines needed for wires (width is used in this calculation
+        int count = 0;
+        for (Obj signal: getVariables().values().toArray(new Obj[0])) {
+            count+=signal.width;
+        }
+        return count;
     }
 
     public void reverseGates(int startIndex, int endIndex) {

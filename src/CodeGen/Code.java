@@ -7,13 +7,17 @@ import SymTable.Obj;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.*;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
+import static CodeGen.Gate.Kind.*;
 
 public class Code {
 
     Path curPath;
-    BufferedWriter curWriter;
+    Map<String, CodeMod> modules;
+    CodeMod curMod;
 
     public Code(String folderName) {
         curPath = Path.of(folderName);
@@ -24,34 +28,33 @@ public class Code {
         } catch (IOException e) {
             System.err.println("Failed to create directory!" + e.getMessage());
         }
+        modules = new HashMap<>();
     }
 
     public void createModule(Mod module) {
+        curMod = new CodeMod(module.name);
+        modules.put(module.name, curMod);
+        curMod.addVariables(module.getLocals());
+    }
+
+    public void endModule(Mod module)  {
+        //ends the module and writes it to file
         try { //delete File if it already exists
             Files.deleteIfExists(Path.of(curPath.toString(), module.name+".real"));
         } catch (IOException e) {
             e.printStackTrace();
         }
         try {
-            curWriter = Files.newBufferedWriter(Path.of(curPath.toString(), module.name+".real"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return;
-        }
-        writeHeader(module);
+            //create Writer
+            BufferedWriter curWriter = Files.newBufferedWriter(Path.of(curPath.toString(), module.name+".real"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
 
-    }
-
-    public void writeHeader(Mod module) {
-        //here the Header of the REAL File is written
-        try {
             curWriter.append("# ").append(module.name);
             curWriter.newLine();
             curWriter.append(".version 2.0");
             curWriter.newLine();
-            curWriter.append(".numvars ").append(String.valueOf(module.getLineCount()));
+            curWriter.append(".numvars ").append(String.valueOf(curMod.getVarCount()));
             curWriter.newLine();
-            Obj[] lines = module.getLines();
+            Obj[] lines = curMod.getVariables().values().toArray(new Obj[0]);
             curWriter.append(".variables ");
             for (Obj line : lines) {
                 if(line.width == 1) {
@@ -61,7 +64,7 @@ public class Code {
                     curWriter.append(line.name).append("_").append(String.valueOf(i)).append(" "); //write all subvariables of the width
                 }
             }
-            //we leave out inputs and outputs as these are optional and not specified in SyReC
+            //TODO inputs and outputs (optional and not specified in SyReC)
             curWriter.newLine();
             curWriter.append(".constants ");
             for (Obj line : lines) {
@@ -87,13 +90,38 @@ public class Code {
             curWriter.newLine();
             curWriter.append(".begin");
             curWriter.newLine();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
-    public void endModule(Mod module)  {
-        try {
+            //here the gates start
+            for(Gate gate : curMod.getGates()) {
+                ArrayList<String> controlLines = gate.getControlLines();
+                ArrayList<String> targetLines = gate.getTargetLines();
+                switch (gate.kind) {
+
+                    case Toffoli:
+                        curWriter.append("t");
+                        break;
+                    case Fredkin:
+                        curWriter.append("f");
+                        break;
+                    case Peres:
+                        curWriter.append("p");
+                        break;
+                    case V:
+                        curWriter.append("v");
+                        break;
+                    case Vplus:
+                        curWriter.append("v+");
+                        break;
+                }
+                curWriter.append(String.valueOf(controlLines.size()+targetLines.size()));
+                for(String line : controlLines) {
+                    curWriter.append(" ").append(line);
+                }
+                for(String line : targetLines) {
+                    curWriter.append(" ").append(line);
+                }
+                curWriter.newLine();
+            }
             curWriter.append(".end");
             curWriter.close();
         } catch (IOException e) {
@@ -104,73 +132,46 @@ public class Code {
     //swap of two signals
     //function is only called if the width is equal
     public void swap(SignalObject firstSig, SignalObject secondSig) {
-        try {
-            for(int i = 0; i < firstSig.getWidth(); i++) {
-                curWriter.append("f2 ").append(firstSig.ident);
-                appendBus(firstSig, i);
-                curWriter.append(" ").append(secondSig.ident);
-                appendBus(secondSig, i);
-                curWriter.newLine();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+        for(int i = 0; i < firstSig.getWidth(); i++) {
+            curMod.addGate(Fredkin, appendBus(firstSig, i), appendBus(secondSig, i));
         }
     }
 
     //negate given Signal
     public void not(SignalObject sig) {
-        try {
-            for(int i = 0; i < sig.getWidth(); i++) {
-                curWriter.append("t1 ").append(sig.ident);
-                appendBus(sig, i);
-                curWriter.newLine();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+        for(int i = 0; i < sig.getWidth(); i++) {
+            curMod.addGate(Toffoli, appendBus(sig, i));
         }
     }
 
 
 
     //appends the correct index to a BusSignal
-    private void appendBus(SignalObject sig, int i) throws IOException {
+    private String appendBus(SignalObject sig, int i) {
         if(sig.isBus && sig.isAscending()) {
-            curWriter.append("_").append(String.valueOf(i+sig.getStartWidth()));
+            return sig.ident+"_"+(i+sig.getStartWidth());
         }
         if(sig.isBus && !sig.isAscending()) {
-            curWriter.append("_").append(String.valueOf(sig.getStartWidth()-i));
+            return sig.ident+"_"+(sig.getStartWidth()-i);
         }
+        return sig.ident;
     }
 
     //++= Statement
     public void plusplus(SignalObject sig) {
-        try {
-            for(int i = sig.getWidth()-1; i >= 0; i--) {
-                curWriter.append("t").append(String.valueOf(i+1));
-                for(int j = 0; j <= i; j++) {
-                    curWriter.append(" ").append(sig.ident);
-                    appendBus(sig, j);
-                }
-                curWriter.newLine();
+        for(int i = sig.getWidth()-1; i >= 0; i--) {
+            ArrayList<String> controlLines = new ArrayList<>();
+            for(int j = 0; j < i; j++) {
+                controlLines.add(appendBus(sig, j));
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+            curMod.addGate(Toffoli, appendBus(sig, i),controlLines);
         }
     }
 
-    //--= Statement, basically plusplus but in reverse
+    //--= Statement, plusplus but in reverse
     public void minusminus(SignalObject sig) {
-        try {
-            for(int i = 0; i < sig.getWidth(); i++) {
-                curWriter.append("t").append(String.valueOf(i+1));
-                for(int j = 0; j <= i; j++) {
-                    curWriter.append(" ").append(sig.ident);
-                    appendBus(sig, j);
-                }
-                curWriter.newLine();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        int lastGate = curMod.getLastGateNumber();
+        plusplus(sig);
+        curMod.reverseGates(lastGate+1, curMod.getLastGateNumber());
     }
 }

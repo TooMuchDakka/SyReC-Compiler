@@ -6,9 +6,10 @@ import java.util.Map;
 
 public class Mod {
 
+    //the Symtable module
     public final String name;
     private int signalCount = 0; //count number of signals (for REAL format)
-    private int parameterCount = 0; //count parameters cor call
+    private int parameterCount = 0; //count parameters for call
 
     private Map<String, Obj> locals = new HashMap<String, Obj>();
 
@@ -56,6 +57,10 @@ public class Mod {
             return null;
         }
         return new Obj(locals.get(name));
+    }
+
+    public HashMap<String, Obj> getLocals() {
+        return new HashMap<String, Obj>(locals);
     }
 
 }
