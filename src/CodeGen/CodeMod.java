@@ -11,7 +11,7 @@ public class CodeMod {
     //A Dataobject to hold the Code representation of a module
     private final String name;
     private final ArrayList<Obj> variables;   //the variables defined in the source code
-    private final ArrayList<Obj> additionalLines; //the lines that get created internally by expressions
+    private final HashMap<String, Obj> additionalLines; //the lines that get created internally by expressions
     private final ArrayList<Obj> zeroLines; //additionalLines that are guaranteed zero
     private int addLineCounter = 0; //used to number the additional lines
     private final ArrayList<Gate> gates;
@@ -19,31 +19,43 @@ public class CodeMod {
     public CodeMod(String name, HashMap<String, Obj> variables) {
         this.name = name;
         this.variables = new ArrayList<Obj>(variables.values());
-        additionalLines = new ArrayList<Obj>();
+        additionalLines = new HashMap<String, Obj>();
         zeroLines = new ArrayList<Obj>();
         gates = new ArrayList<Gate>();
     }
 
-    public ArrayList<Obj> getAdditionalLines(int width) {
-        ArrayList<Obj> lines = new ArrayList<>();
+    public SignalObject getAdditionalLines(int width) {
+        //returns a SignalObject consisting of additionalLines
+        //tries to use as many already created lines as possible
+        ArrayList<String> lines = new ArrayList<>();
+        Obj temp;
         for (int i = 0; i < width; i++) {
             if(zeroLines.size() > 0) {
-                lines.add(zeroLines.get(zeroLines.size()-1));
+                temp = zeroLines.get(zeroLines.size()-1);
+                additionalLines.put(temp.name, temp);
+                lines.add(temp.name);
                 zeroLines.remove(zeroLines.size()-1);
             }
             else {
-                lines.add(new Obj(Obj.Kind.Wire, "addLine"+addLineCounter, 0));
+                temp = new Obj(Obj.Kind.Wire, "addLine"+addLineCounter, 0);
+                additionalLines.put(temp.name, temp);
+                lines.add(temp.name);
                 addLineCounter++;
             }
         }
-        additionalLines.addAll(lines);
-        return lines;
+        return new SignalObject("addLine", lines);
+    }
+
+    public void resetLine(String lineName) {
+        if(additionalLines.containsKey(lineName)) {
+            zeroLines.add(additionalLines.remove(lineName));
+        }
     }
 
 
     public ArrayList<Obj> getVariables() {    //returns variables and lines
         ArrayList<Obj> list = new ArrayList<>(variables);
-        list.addAll(additionalLines);
+        list.addAll(additionalLines.values());
         list.addAll(zeroLines);
         return list;
     }

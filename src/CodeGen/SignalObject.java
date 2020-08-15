@@ -13,6 +13,7 @@ public class SignalObject {
 
 
     public SignalObject(Obj obj, int startWidth, int endWidth) {
+        //Constructor used when creating SignalObject from InputCode
         this.name = obj.name;
         lines = new ArrayList<>();
         if(obj.width == 1) {
@@ -28,6 +29,12 @@ public class SignalObject {
                 lines.add((name+"_"+i));
             }
         }
+    }
+
+    public SignalObject(String name, ArrayList<String> lines) {
+        //SignalObject used for additionalLines
+        this.name = name;
+        this.lines = new ArrayList<>(lines);
     }
 
     public int getWidth() {
