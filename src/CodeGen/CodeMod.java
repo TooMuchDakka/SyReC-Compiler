@@ -10,25 +10,42 @@ import java.util.List;
 public class CodeMod {
     //A Dataobject to hold the Code representation of a module
     private final String name;
-    private final HashMap<String, Obj> variables;
+    private final ArrayList<Obj> variables;   //the variables defined in the source code
+    private final ArrayList<Obj> additionalLines; //the lines that get created internally by expressions
+    private final ArrayList<Obj> zeroLines; //additionalLines that are guaranteed zero
+    private int addLineCounter = 0; //used to number the additional lines
     private final ArrayList<Gate> gates;
 
-    public CodeMod(String name) {
+    public CodeMod(String name, HashMap<String, Obj> variables) {
         this.name = name;
-        variables = new HashMap<String, Obj>();
+        this.variables = new ArrayList<Obj>(variables.values());
+        additionalLines = new ArrayList<Obj>();
+        zeroLines = new ArrayList<Obj>();
         gates = new ArrayList<Gate>();
     }
 
-    public void addVariables(Obj singleVariable) {
-        variables.put(singleVariable.name, singleVariable);
+    public ArrayList<Obj> getAdditionalLines(int width) {
+        ArrayList<Obj> lines = new ArrayList<>();
+        for (int i = 0; i < width; i++) {
+            if(zeroLines.size() > 0) {
+                lines.add(zeroLines.get(zeroLines.size()-1));
+                zeroLines.remove(zeroLines.size()-1);
+            }
+            else {
+                lines.add(new Obj(Obj.Kind.Wire, "addLine"+addLineCounter, 0));
+                addLineCounter++;
+            }
+        }
+        additionalLines.addAll(lines);
+        return lines;
     }
 
-    public void addVariables(HashMap<String, Obj> variables) {
-        this.variables.putAll(variables);
-    }
 
-    public HashMap<String, Obj> getVariables() {
-        return new HashMap<String, Obj>(variables);
+    public ArrayList<Obj> getVariables() {    //returns variables and lines
+        ArrayList<Obj> list = new ArrayList<>(variables);
+        list.addAll(additionalLines);
+        list.addAll(zeroLines);
+        return list;
     }
 
     public void addGate (Gate.Kind kind, String targetLine) {
@@ -75,7 +92,7 @@ public class CodeMod {
 
     public int getVarCount() { //return parameters+lines needed for wires (width is used in this calculation
         int count = 0;
-        for (Obj signal: getVariables().values().toArray(new Obj[0])) {
+        for (Obj signal: getVariables()) {
             count+=signal.width;
         }
         return count;

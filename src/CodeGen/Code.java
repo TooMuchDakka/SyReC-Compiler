@@ -34,9 +34,8 @@ public class Code {
     }
 
     public void createModule(Mod module) {
-        curMod = new CodeMod(module.name);
+        curMod = new CodeMod(module.name, module.getLocals());
         modules.put(module.name, curMod);
-        curMod.addVariables(module.getLocals());
     }
 
     public void endModule(Mod module)  {
@@ -56,7 +55,7 @@ public class Code {
             curWriter.newLine();
             curWriter.append(".numvars ").append(String.valueOf(curMod.getVarCount()));
             curWriter.newLine();
-            Obj[] lines = curMod.getVariables().values().toArray(new Obj[0]);
+            ArrayList<Obj> lines = curMod.getVariables();
             curWriter.append(".variables ");
             for (Obj line : lines) {
                 if(line.width == 1) {
