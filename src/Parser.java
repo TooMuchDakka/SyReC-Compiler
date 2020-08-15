@@ -493,7 +493,9 @@ public class Parser {
 		SemErr("Signal "+ident+" is not defined");
 		}
 		Obj curSignal = curMod.getLocal(ident);
-		sig = new SignalObject (curSignal);
+		int startWidth = -1;
+		int endWidth = -1;
+		
 		while (la.kind == 34) {
 			Get();
 			Expression();
@@ -505,8 +507,8 @@ public class Parser {
 			if(lowerBound >= curSignal.width || lowerBound < 0) {
 			 SemErr("Signal out of bounds: "+lowerBound);
 			}
-			sig.setStartWidth(lowerBound);
-			sig.setEndWidth(lowerBound); //so far both are equal
+			startWidth = lowerBound;
+			endWidth = lowerBound; //so far both are equal
 			
 			if (la.kind == 52) {
 				Get();
@@ -514,9 +516,14 @@ public class Parser {
 				if(uperBound >= curSignal.width || uperBound < 0) {
 				 SemErr("Signal out of bounds: "+uperBound);
 				}
-				sig.setEndWidth(uperBound);
+				endWidth = uperBound;
 			}
 		}
+		if(startWidth == -1) {
+		 startWidth = 0;
+		 endWidth = curSignal.width -1;
+		}
+		sig = new SignalObject (curSignal, startWidth, endWidth);
 		return sig;
 	}
 

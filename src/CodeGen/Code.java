@@ -134,38 +134,26 @@ public class Code {
     //function is only called if the width is equal
     public void swap(SignalObject firstSig, SignalObject secondSig) {
         for(int i = 0; i < firstSig.getWidth(); i++) {
-            curMod.addGate(Fredkin, appendBus(firstSig, i), appendBus(secondSig, i));
+            curMod.addGate(Fredkin, firstSig.getLineName(i), secondSig.getLineName(i));
         }
     }
 
     //negate given Signal
     public void not(SignalObject sig) {
         for(int i = 0; i < sig.getWidth(); i++) {
-            curMod.addGate(Toffoli, appendBus(sig, i));
+            curMod.addGate(Toffoli, sig.getLineName(i));
         }
     }
 
-
-
-    //appends the correct index to a BusSignal
-    private String appendBus(SignalObject sig, int i) {
-        if(sig.isBus && sig.isAscending()) {
-            return sig.ident+"_"+(i+sig.getStartWidth());
-        }
-        if(sig.isBus && !sig.isAscending()) {
-            return sig.ident+"_"+(sig.getStartWidth()-i);
-        }
-        return sig.ident;
-    }
 
     //++= Statement
     public void plusplus(SignalObject sig) {
         for(int i = sig.getWidth()-1; i >= 0; i--) {
             ArrayList<String> controlLines = new ArrayList<>();
             for(int j = 0; j < i; j++) {
-                controlLines.add(appendBus(sig, j));
+                controlLines.add(sig.getLineName(j));
             }
-            curMod.addGate(Toffoli, appendBus(sig, i),controlLines);
+            curMod.addGate(Toffoli, sig.getLineName(i),controlLines);
         }
     }
 

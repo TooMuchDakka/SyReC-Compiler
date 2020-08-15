@@ -260,19 +260,26 @@ PRODUCTIONS
                                                                 SemErr("Signal "+ident+" is not defined");
                                                             }
                                                             Obj curSignal = curMod.getLocal(ident);
-                                                            sig = new SignalObject (curSignal);.)
+                                                            int startWidth = -1;
+                                                            int endWidth = -1;
+                                                            .)
                             {'[' Expression ']'}
                             ['.' number<out int lowerBound> (.if(lowerBound >= curSignal.width || lowerBound < 0) {
                                                                 SemErr("Signal out of bounds: "+lowerBound);
                                                             }
-                                                            sig.setStartWidth(lowerBound);
-                                                            sig.setEndWidth(lowerBound); //so far both are equal
+                                                            startWidth = lowerBound;
+                                                            endWidth = lowerBound; //so far both are equal
                                                             .)
                             [':' number<out int uperBound>  (.if(uperBound >= curSignal.width || uperBound < 0) {
                                                                 SemErr("Signal out of bounds: "+uperBound);
                                                             }
-                                                            sig.setEndWidth(uperBound);.)
-                            ]].
+                                                            endWidth = uperBound;.)
+                            ]]                              (.if(startWidth == -1) {
+                                                                startWidth = 0;
+                                                                endWidth = curSignal.width -1;
+                                                            }
+                                                            sig = new SignalObject (curSignal, startWidth, endWidth);.)
+                            .
 
     //Expressions
     Expression          =   Signal<out SignalObject sig> | IF (IsShift()) ShiftExpression | IF (IsBinary())BinaryExpression | UnaryExpression | number<out int number>.

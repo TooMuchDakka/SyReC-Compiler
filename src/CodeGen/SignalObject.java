@@ -2,63 +2,40 @@ package CodeGen;
 
 import SymTable.Obj;
 
+import java.util.ArrayList;
+
 //Object for Codegen to get Information needed like Signal name
-    //or information pertaining width
+    //for busses appends the indexes to all elements
 public class SignalObject {
-    private int startWidth;
-    private int endWidth;
-    public String ident;
-    public final boolean isBus;
-    private boolean isAscending;
+    private final ArrayList<String> lines;
+    private final String name;
 
-    public SignalObject(Obj local) {
-        startWidth = 0;
-        endWidth = local.width-1;
-        ident = local.name;
-        isBus = startWidth!=endWidth;
-        checkAscending();
-    }
 
-    public SignalObject(String ident, int start, int end, boolean isBus) {
-        startWidth = start;
-        endWidth = end;
-        this.ident = ident;
-        this.isBus = isBus;
-        checkAscending();
+
+    public SignalObject(Obj obj, int startWidth, int endWidth) {
+        this.name = obj.name;
+        lines = new ArrayList<>();
+        if(obj.width == 1) {
+            lines.add(name);
+        }
+        else if(startWidth < endWidth) {
+            for(int i = startWidth; i <= endWidth; i++) {
+                lines.add(name+"_"+i);
+            }
+        }
+        else {
+            for(int i = startWidth; i >= endWidth; i--) {
+                lines.add((name+"_"+i));
+            }
+        }
     }
 
     public int getWidth() {
-        if(isAscending) {
-            return endWidth-startWidth+1;
-        }
-        else {
-            return startWidth-endWidth+1;
-        }
+        return lines.size();
     }
 
-    public int getStartWidth() {
-        return startWidth;
+    public String getLineName(int index) {
+        return lines.get(index);
     }
 
-    public int getEndWidth() {
-        return endWidth;
-    }
-
-    public void setStartWidth(int startWidth) {
-        this.startWidth = startWidth;
-        checkAscending();
-    }
-
-    public void setEndWidth(int endWidth) {
-        this.endWidth = endWidth;
-        checkAscending();
-    }
-
-    private void checkAscending() {
-        isAscending = startWidth < endWidth;
-    }
-
-    public boolean isAscending() {
-        return isAscending;
-    }
 }
