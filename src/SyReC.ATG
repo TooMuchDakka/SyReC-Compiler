@@ -147,7 +147,10 @@ PRAGMAS
 // Add pragma declarations here.
 // Example:
 //   switch = '$' { digit | letter }. (. Optional semantic action .)
-
+    activateLine        =   "§lineOn".                  (.codegen.lineAware = true;.)
+    deactivateLine      =   "§lineOff".                 (.codegen.lineAware = false;.)
+    activateCost        =   "§costOn".                  (.codegen.costAware = true;.)
+    deactivateCost      =   "§costOff".                 (.codegen.costAware = false;.)
 
 COMMENTS FROM "//" TO "\n"
 IGNORE "\r" + "\n" + "\t"

@@ -16,8 +16,10 @@ import static CodeGen.Gate.Kind.*;
 public class Code {
 
     Path curPath;
-    Map<String, CodeMod> modules;
+    Map<String, CodeMod> modules; //can be used to unravel calls
     CodeMod curMod;
+    public boolean lineAware = true; //to deactivate line Aware synthesis to save lines
+    public boolean costAware = true; //to deactivate cost Aware synthesis to save gates
 
     public Code(String folderName) {
         curPath = Path.of(folderName);

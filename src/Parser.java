@@ -34,6 +34,10 @@ public class Parser {
 	public static final int _leql = 21;
 	public static final int _geql = 22;
 	public static final int maxT = 55;
+	public static final int _activateLine = 56;
+	public static final int _deactivateLine = 57;
+	public static final int _activateCost = 58;
+	public static final int _deactivateCost = 59;
 
 	static final boolean _T = true;
 	static final boolean _x = false;
@@ -171,6 +175,18 @@ public class Parser {
 				break;
 			}
 
+			if (la.kind == 56) {
+				codegen.lineAware = true;
+			}
+			if (la.kind == 57) {
+				codegen.lineAware = false;
+			}
+			if (la.kind == 58) {
+				codegen.costAware = true;
+			}
+			if (la.kind == 59) {
+				codegen.costAware = false;
+			}
 			la = t;
 		}
 	}
