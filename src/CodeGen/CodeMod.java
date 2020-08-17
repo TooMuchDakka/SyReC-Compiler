@@ -68,11 +68,11 @@ public class CodeMod {
         gates.add(gate);
     }
 
-    public void addGate (Gate.Kind kind, String targetLine1, String targetLine2) {
-        //gate with just two targetLines
+    public void addGate (Gate.Kind kind, ArrayList<String> targetLines) {
+        //gate with multiple targetLines
         //TODO throw error when a Gate kind that cant have two target lines calls this
         Gate gate = new Gate(kind);
-        gate.addTargetLines(new ArrayList<>(List.of(targetLine1, targetLine2)));
+        gate.addTargetLines(targetLines);
         gates.add(gate);
     }
 
@@ -85,11 +85,20 @@ public class CodeMod {
         gates.add(gate);
     }
 
-    public void addGate (Gate.Kind kind, String targetLine1, String targetLine2, ArrayList<String> controlLines) {
-        //gate with two target and x control lines
+    public void addGate (Gate.Kind kind, String targetLine, String controlLine) {
+        //gate with one target and one control lines
+        //TODO throw error when a Gate kind that cant have one target lines calls this
+        Gate gate = new Gate(kind);
+        gate.addTargetLines(new ArrayList<>(List.of(targetLine)));
+        gate.addControlLines(new ArrayList<>(List.of(controlLine)));
+        gates.add(gate);
+    }
+
+    public void addGate (Gate.Kind kind, ArrayList<String> targetLines, ArrayList<String> controlLines) {
+        //gate with x target and x control lines
         //TODO throw error when a Gate kind that cant have two target lines calls this
         Gate gate = new Gate(kind);
-        gate.addTargetLines(new ArrayList<>(List.of(targetLine1, targetLine2)));
+        gate.addTargetLines(targetLines);
         gate.addControlLines(controlLines);
         gates.add(gate);
     }

@@ -6,6 +6,7 @@ import SymTable.SymTable;
     import SymTable.Mod;
     import CodeGen.Code;
     import CodeGen.SignalObject;
+    import CodeGen.ExpressionObject;
 
 
 
@@ -448,13 +449,13 @@ public class Parser {
 
 	void IfStatement() {
 		Expect(42);
-		Expression();
+		ExpressionObject ifExp = Expression();
 		Expect(43);
 		StatementList();
 		Expect(44);
 		StatementList();
 		Expect(45);
-		Expression();
+		ExpressionObject fiExp = Expression();
 	}
 
 	void UnaryStatement() {
@@ -498,7 +499,7 @@ public class Parser {
 		
 		while (la.kind == 34) {
 			Get();
-			Expression();
+			ExpressionObject exp = Expression();
 			Expect(35);
 		}
 		if (la.kind == 51) {
@@ -547,38 +548,58 @@ public class Parser {
 			Get();
 		} else SynErr(64);
 		Expect(19);
-		Expression();
+		ExpressionObject exp = Expression();
 	}
 
-	void Expression() {
+	ExpressionObject  Expression() {
+		ExpressionObject  exp;
+		exp = new ExpressionObject(0);
 		if (la.kind == 1) {
 			SignalObject sig = Signal();
+			exp = new ExpressionObject(sig);
 		} else if (IsShift()) {
-			ShiftExpression();
+			ExpressionObject shiftExp = ShiftExpression();
+			exp = shiftExp;
 		} else if (IsBinary()) {
-			BinaryExpression();
+			ExpressionObject binExp = BinaryExpression();
+			exp = binExp;
 		} else if (la.kind == 46 || la.kind == 54) {
-			UnaryExpression();
+			ExpressionObject unExp = UnaryExpression();
+			exp = unExp;
 		} else if (StartOf(1)) {
 			int number = number();
+			exp = new ExpressionObject(number);
 		} else SynErr(65);
+		return exp;
 	}
 
-	void ShiftExpression() {
+	ExpressionObject  ShiftExpression() {
+		ExpressionObject  shiftExp;
 		Expect(25);
-		Expression();
+		ExpressionObject exp = Expression();
+		boolean isLeft = false;
 		if (la.kind == 5) {
 			Get();
+			isLeft = true;
 		} else if (la.kind == 4) {
 			Get();
 		} else SynErr(66);
 		int number = number();
 		Expect(26);
+		if(isLeft) {
+		 shiftExp = codegen.leftShift(exp, number);
+		}
+		else {
+		 shiftExp = codegen.rightShift(exp, number);
+		}
+		return shiftExp;
 	}
 
-	void BinaryExpression() {
+	ExpressionObject  BinaryExpression() {
+		ExpressionObject  binExp;
+		binExp = new ExpressionObject(0);
 		Expect(25);
-		Expression();
+		ExpressionObject firstExp = Expression();
 		switch (la.kind) {
 		case 6: {
 			Get();
@@ -650,17 +671,47 @@ public class Parser {
 		}
 		default: SynErr(67); break;
 		}
-		Expression();
+		ExpressionObject secondExp = Expression();
 		Expect(26);
+		return binExp;
 	}
 
-	void UnaryExpression() {
+	ExpressionObject  UnaryExpression() {
+		ExpressionObject  unExp;
+		boolean bitwise = false;
+		unExp = new ExpressionObject(0);
 		if (la.kind == 54) {
 			Get();
 		} else if (la.kind == 46) {
 			Get();
+			bitwise = true;
 		} else SynErr(68);
-		Expression();
+		ExpressionObject exp = Expression();
+		if(!bitwise) {
+		 if(exp.isNumber) {
+		     if(exp.number == 1) {
+		         unExp = new ExpressionObject(0);
+		     }
+		     else if(exp.number == 0) {
+		         unExp = new ExpressionObject(1);
+		     }
+		     else {
+		         SemErr("Logical Not on a number that is not 0 or 1");
+		     }
+		 }
+		 else {
+		     if(exp.signal.getWidth() == 1) {
+		         unExp = codegen.notExp(exp);
+		     }
+		     else {
+		         SemErr("Logical Not on a Busline or an Expression that is not a boolean");
+		     }
+		 }
+		}
+		else {
+		 unExp = codegen.notExp(exp);
+		}
+		return unExp;
 	}
 
 

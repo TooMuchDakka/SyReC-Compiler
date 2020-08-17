@@ -5,6 +5,7 @@
     import SymTable.Mod;
     import CodeGen.Code;
     import CodeGen.SignalObject;
+    import CodeGen.ExpressionObject;
 
 COMPILER SyReC
 
@@ -228,8 +229,9 @@ PRODUCTIONS
                                                         }.)
                             .
     ForStatement        =   "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number<out int start> "to"] number<out int stop> ["step" ['-'] number<out int stepsize>] StatementList "rof".
-    IfStatement         =   "if" Expression "then" StatementList "else" StatementList "fi" Expression.
-    AssignStatement<SignalObject firstSignal>     =   ('^'|'+'|'-') '=' Expression.
+    IfStatement         =   "if" Expression<out ExpressionObject ifExp> "then" StatementList "else" StatementList "fi" Expression<out ExpressionObject fiExp>.
+    AssignStatement<SignalObject firstSignal>       =   ('^'|'+'|'-')                               (.String assignToggle = t.val;.)
+                                                    '=' Expression<out ExpressionObject exp>.
 
     UnaryStatement      =   ('~'|"++"|"--")             (.String calcToggle = t.val;.)
                             '=' Signal<out SignalObject sig>
@@ -263,7 +265,7 @@ PRODUCTIONS
                                                             int startWidth = -1;
                                                             int endWidth = -1;
                                                             .)
-                            {'[' Expression ']'}
+                            {'[' Expression<out ExpressionObject exp> ']'}
                             ['.' number<out int lowerBound> (.if(lowerBound >= curSignal.width || lowerBound < 0) {
                                                                 SemErr("Signal out of bounds: "+lowerBound);
                                                             }
@@ -282,10 +284,58 @@ PRODUCTIONS
                             .
 
     //Expressions
-    Expression          =   Signal<out SignalObject sig> | IF (IsShift()) ShiftExpression | IF (IsBinary())BinaryExpression | UnaryExpression | number<out int number>.
-    BinaryExpression    =   '(' Expression ('+'|'-'|'^'|'*'|'/'|'%'|"*>"|"&&"|"||"|'&'|'|'|'<'|'>'|'='|"!="|"<="|">=") Expression ')'.
-    UnaryExpression     =   ('!'|'~') Expression.
-    ShiftExpression     =   '(' Expression (shiftL|shiftR) number<out int number> ')'.
+    Expression<out ExpressionObject exp>                                                    (.exp = new ExpressionObject(0);.)
+                        = Signal<out SignalObject sig>                                      (.exp = new ExpressionObject(sig);.)
+                        | IF (IsShift()) ShiftExpression<out ExpressionObject shiftExp>     (.exp = shiftExp;.)
+                        | IF (IsBinary())BinaryExpression<out ExpressionObject binExp>      (.exp = binExp;.)
+                        | UnaryExpression<out ExpressionObject unExp>                       (.exp = unExp;.)
+                        | number<out int number>                                            (.exp = new ExpressionObject(number);.)
+                        .
+
+
+    BinaryExpression<out ExpressionObject binExp>                                           (.binExp = new ExpressionObject(0);.)
+                                                    =   '(' Expression<out ExpressionObject firstExp> ('+'|'-'|'^'|'*'|'/'|'%'|"*>"|"&&"|"||"|'&'|'|'|'<'|'>'|'='|"!="|"<="|">=") Expression<out ExpressionObject secondExp> ')'.
+
+
+    UnaryExpression<out ExpressionObject unExp>     =                                               (.boolean bitwise = false;
+                                                                                                    unExp = new ExpressionObject(0);.)
+                                                    ('!'|'~'                                        (.bitwise = true;.)
+                                                    ) Expression<out ExpressionObject exp>          (.if(!bitwise) {
+                                                                                                        if(exp.isNumber) {
+                                                                                                            if(exp.number == 1) {
+                                                                                                                unExp = new ExpressionObject(0);
+                                                                                                            }
+                                                                                                            else if(exp.number == 0) {
+                                                                                                                unExp = new ExpressionObject(1);
+                                                                                                            }
+                                                                                                            else {
+                                                                                                                SemErr("Logical Not on a number that is not 0 or 1");
+                                                                                                            }
+                                                                                                        }
+                                                                                                        else {
+                                                                                                            if(exp.signal.getWidth() == 1) {
+                                                                                                                unExp = codegen.notExp(exp);
+                                                                                                            }
+                                                                                                            else {
+                                                                                                                SemErr("Logical Not on a Busline or an Expression that is not a boolean");
+                                                                                                            }
+                                                                                                        }
+                                                                                                    }
+                                                                                                    else {
+                                                                                                        unExp = codegen.notExp(exp);
+                                                                                                    }.)
+                                                    .
+
+
+    ShiftExpression<out ExpressionObject shiftExp>  =   '(' Expression<out ExpressionObject exp>    (.boolean isLeft = false;.)
+                                                  (shiftL                                           (.isLeft = true;.)
+                                                  |shiftR
+                                                  ) number<out int number> ')'                      (.if(isLeft) {
+                                                                                                        shiftExp = codegen.leftShift(exp, number);
+                                                                                                    }
+                                                                                                    else {
+                                                                                                        shiftExp = codegen.rightShift(exp, number);
+                                                                                                    }.).
 
 
 

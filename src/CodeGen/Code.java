@@ -7,10 +7,8 @@ import SymTable.Obj;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+
 import static CodeGen.Gate.Kind.*;
 
 public class Code {
@@ -134,7 +132,8 @@ public class Code {
     //function is only called if the width is equal
     public void swap(SignalObject firstSig, SignalObject secondSig) {
         for(int i = 0; i < firstSig.getWidth(); i++) {
-            curMod.addGate(Fredkin, firstSig.getLineName(i), secondSig.getLineName(i));
+            ArrayList<String> targetLines = new ArrayList<String>(Arrays.asList(firstSig.getLineName(i), secondSig.getLineName(i)));
+            curMod.addGate(Fredkin, targetLines);
         }
     }
 
@@ -162,5 +161,54 @@ public class Code {
         int lastGate = curMod.getLastGateNumber();
         plusplus(sig);
         curMod.reverseGates(lastGate+1, curMod.getLastGateNumber());
+    }
+
+    public ExpressionObject leftShift(ExpressionObject exp, int number) {
+        if(exp.isNumber) {
+            return new ExpressionObject(exp.number << number);
+        }
+        else {
+            SignalObject additionalLines = curMod.getAdditionalLines(exp.signal.getWidth()+number);
+            int resetStart = curMod.getLastGateNumber()+1;
+            for(int i = 0; i < exp.signal.getWidth(); i++) {
+                curMod.addGate(Toffoli, additionalLines.getLineName(i+number), exp.signal.getLineName(i));
+            }
+            int resetEnd = curMod.getLastGateNumber();
+            return new ExpressionObject(additionalLines, resetStart, resetEnd);
+        }
+    }
+
+    public ExpressionObject rightShift(ExpressionObject exp, int number) {
+        if(exp.isNumber) {
+            return new ExpressionObject(exp.number >> number);
+        }
+        else {
+            SignalObject additionalLines = curMod.getAdditionalLines(exp.signal.getWidth()-number);
+            int resetStart = curMod.getLastGateNumber()+1;
+            for(int i = 0; i < additionalLines.getWidth(); i++) {
+                curMod.addGate(Toffoli, additionalLines.getLineName(i), exp.signal.getLineName(i+number));
+            }
+            int resetEnd = curMod.getLastGateNumber();
+            return new ExpressionObject(additionalLines, resetStart, resetEnd);
+        }
+    }
+
+    public ExpressionObject notExp(ExpressionObject exp) {
+        //bitwise not on a number
+        if(exp.isNumber) {
+            return new ExpressionObject(~exp.number);
+        }
+        else {
+            SignalObject additionalLines = curMod.getAdditionalLines(exp.signal.getWidth());
+            int resetStart = curMod.getLastGateNumber()+1;
+            for(int i = 0; i < exp.signal.getWidth(); i++) {
+                ArrayList<String> controlLines = new ArrayList<>();
+                controlLines.add(exp.signal.getLineName(i));
+                curMod.addGate(Toffoli, additionalLines.getLineName(i), controlLines);
+                curMod.addGate(Toffoli, additionalLines.getLineName(i));
+            }
+            int resetEnd = curMod.getLastGateNumber();
+            return new ExpressionObject(additionalLines, resetStart, resetEnd);
+        }
     }
 }
