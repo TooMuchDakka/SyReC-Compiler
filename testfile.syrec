@@ -8,7 +8,8 @@ module testmodule1 (in a(3), in b(3), out c)
 	f <=> b.1:1;
 	++=a;
 	--=b;
-	~=a
+	~=a;
+	a^=(b>>1)
 	
 	
 

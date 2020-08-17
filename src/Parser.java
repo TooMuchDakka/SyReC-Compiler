@@ -89,17 +89,16 @@ public class Parser {
 
     private boolean IsShift(){
         scanner.ResetPeek();
-        Token x = la;
         Token next = scanner.Peek();
-        if(la.kind != '(') {
+        if(!la.val.equals("(")) {
             return false;
         }
             int i = 1;
             while (i > 0) {
-                if(next.kind == '(') {
+                if(next.val.equals("(")) {
                     i++;
                 }
-                else if(next.kind == ')'){
+                else if(next.val.equals(")")){
                     i--;
                 }
                 else if(i == 1 && (next.kind == _shiftL || next.kind == _shiftR)){
@@ -547,8 +546,29 @@ public class Parser {
 		} else if (la.kind == 7) {
 			Get();
 		} else SynErr(64);
+		String assignToggle = t.val;
 		Expect(19);
 		ExpressionObject exp = Expression();
+		if(!exp.isNumber && exp.signal.getWidth() != firstSignal.getWidth()) {
+		 SemErr("Signal Width is not equal");
+		}
+		else if(exp.isNumber && firstSignal.getWidth() < Math.ceil(Math.log(exp.number)/Math.log(2))) {
+		 SemErr(exp.number+" doesnt fit into the Signal Width");
+		}
+		else {
+		 switch(assignToggle) {
+		     case "^":
+		         codegen.xorAssign(firstSignal, exp);
+		         codegen.resetExpression(exp);
+		         break;
+		     case "+":
+		         //TODO +assign
+		         break;
+		     default:
+		         //TODO -assign
+		         break;
+		 }
+		}
 	}
 
 	ExpressionObject  Expression() {
