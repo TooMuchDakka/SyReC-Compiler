@@ -67,8 +67,7 @@ public class Code {
             curWriter.newLine();
             curWriter.append(".constants ");
             for (Obj line : lines) {
-                if(line.kind == Obj.Kind.Wire || line.kind == Obj.Kind.Out) {
-                    //Wires and Out are Constant 0 Input
+                if(line.getConstant()) {
                     curWriter.append(String.join("", Collections.nCopies(line.width, "0")));
                 }
                 else {
@@ -78,8 +77,7 @@ public class Code {
             curWriter.newLine();
             curWriter.append(".garbage ");
             for (Obj line : lines) {
-                if(line.kind == Obj.Kind.Wire || line.kind == Obj.Kind.In) {
-                    //Wires and Out are Constant 0 Input
+                if(line.getGarbage()) {
                     curWriter.append(String.join("", Collections.nCopies(line.width, "1")));
                 }
                 else {
@@ -233,6 +231,9 @@ public class Code {
         if(lineAware && exp.resetStart != -1) {
             //we have used the expression so we can now reverse it
             curMod.reverseGates(exp.resetStart, exp.resetEnd);
+            for(int i = 0; i < exp.signal.getWidth(); i++) {
+                curMod.resetLine(exp.signal.getLineName(i));
+            }
         }
     }
 }

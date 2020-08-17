@@ -32,12 +32,13 @@ public class CodeMod {
         for (int i = 0; i < width; i++) {
             if(zeroLines.size() > 0) {
                 temp = zeroLines.get(zeroLines.size()-1);
+                temp.setGarbage(true);
                 additionalLines.put(temp.name, temp);
                 lines.add(temp.name);
                 zeroLines.remove(zeroLines.size()-1);
             }
             else {
-                temp = new Obj(Obj.Kind.Wire, "addLine"+addLineCounter, 0);
+                temp = new Obj(Obj.Kind.Wire, "addLine"+addLineCounter, 1);
                 additionalLines.put(temp.name, temp);
                 lines.add(temp.name);
                 addLineCounter++;
@@ -48,7 +49,10 @@ public class CodeMod {
 
     public void resetLine(String lineName) {
         if(additionalLines.containsKey(lineName)) {
-            zeroLines.add(additionalLines.remove(lineName));
+            Obj line = additionalLines.remove(lineName);
+            //when we reset a line we know its no longer garbage
+            line.setGarbage(false);
+            zeroLines.add(line);
         }
     }
 
