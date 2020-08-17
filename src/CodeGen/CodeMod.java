@@ -132,6 +132,13 @@ public class CodeMod {
         }
     }
 
+    public void addCopyOfGates(int startIndex, int endIndex) {
+        //adds a copy of the gates between both indizes
+        for(int i = startIndex; i <= endIndex; i++) {
+            gates.add(new Gate(gates.get(i)));
+        }
+    }
+
 
 
 }

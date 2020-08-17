@@ -18,6 +18,12 @@ public class Gate {
         targetLines = new ArrayList<>();
     }
 
+    public Gate(Gate gate) {
+        this.kind = gate.kind;
+        controlLines = new ArrayList<>(gate.getControlLines());
+        targetLines = new ArrayList<>(gate.getTargetLines());
+    }
+
     public void addControlLines(ArrayList<String> controlLines) {
         this.controlLines.addAll(controlLines);
     }

@@ -230,7 +230,9 @@ public class Code {
     public void resetExpression(ExpressionObject exp) {
         if(lineAware && exp.resetStart != -1) {
             //we have used the expression so we can now reverse it
-            curMod.reverseGates(exp.resetStart, exp.resetEnd);
+            int start = curMod.getLastGateNumber()+1;
+            curMod.addCopyOfGates(exp.resetStart, exp.resetEnd);
+            curMod.reverseGates(start, curMod.getLastGateNumber());
             for(int i = 0; i < exp.signal.getWidth(); i++) {
                 curMod.resetLine(exp.signal.getLineName(i));
             }
