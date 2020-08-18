@@ -230,7 +230,17 @@ PRODUCTIONS
     ForStatement        =   "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number<out int start> "to"] number<out int stop> ["step" ['-'] number<out int stepsize>] StatementList "rof".
     IfStatement         =   "if" Expression<out ExpressionObject ifExp> "then" StatementList "else" StatementList "fi" Expression<out ExpressionObject fiExp>.
     AssignStatement<SignalObject firstSignal>       =   ('^'|'+'|'-')                               (.String assignToggle = t.val;.)
-                                                    '=' Expression<out ExpressionObject exp>        (.if(!exp.isNumber && exp.signal.getWidth() != firstSignal.getWidth()) {
+                                                    '=' Expression<out ExpressionObject exp>        (.boolean cantAssign = false;
+                                                                                                    for(String line : firstSignal.getLines()) {
+                                                                                                        if(exp.containsSignal(line)) {
+                                                                                                      	    cantAssign = true;
+                                                                                                      		break;
+                                                                                                        }
+                                                                                                    }
+                                                                                                    if(cantAssign) {
+                                                                                                        SemErr("Signal is contained in the Expression of the assign Statement");
+                                                                                                    }
+                                                                                                    else if(!exp.isNumber && exp.signal.getWidth() != firstSignal.getWidth()) {
                                                                                                         SemErr("Signal Width is not equal");
                                                                                                     }
                                                                                                     else if(exp.isNumber && firstSignal.getWidth() < Math.ceil(Math.log(exp.number)/Math.log(2))) {

@@ -549,7 +549,17 @@ public class Parser {
 		String assignToggle = t.val;
 		Expect(19);
 		ExpressionObject exp = Expression();
-		if(!exp.isNumber && exp.signal.getWidth() != firstSignal.getWidth()) {
+		boolean cantAssign = false;
+		for(String line : firstSignal.getLines()) {
+		 if(exp.containsSignal(line)) {
+		    cantAssign = true;
+			break;
+		 }
+		}
+		if(cantAssign) {
+		 SemErr("Signal is contained in the Expression of the assign Statement");
+		}
+		else if(!exp.isNumber && exp.signal.getWidth() != firstSignal.getWidth()) {
 		 SemErr("Signal Width is not equal");
 		}
 		else if(exp.isNumber && firstSignal.getWidth() < Math.ceil(Math.log(exp.number)/Math.log(2))) {

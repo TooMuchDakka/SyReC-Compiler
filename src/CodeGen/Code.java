@@ -172,7 +172,9 @@ public class Code {
                 curMod.addGate(Toffoli, additionalLines.getLineName(i+number), exp.signal.getLineName(i));
             }
             int resetEnd = curMod.getLastGateNumber();
-            return new ExpressionObject(additionalLines, resetStart, resetEnd);
+            ExpressionObject newExp = new ExpressionObject(additionalLines, resetStart, resetEnd);
+            newExp.addSignals(exp.getContainedSignals());
+            return newExp;
         }
     }
 
@@ -187,7 +189,9 @@ public class Code {
                 curMod.addGate(Toffoli, additionalLines.getLineName(i), exp.signal.getLineName(i+number));
             }
             int resetEnd = curMod.getLastGateNumber();
-            return new ExpressionObject(additionalLines, resetStart, resetEnd);
+            ExpressionObject newExp = new ExpressionObject(additionalLines, resetStart, resetEnd);
+            newExp.addSignals(exp.getContainedSignals());
+            return newExp;
         }
     }
 
@@ -206,7 +210,9 @@ public class Code {
                 curMod.addGate(Toffoli, additionalLines.getLineName(i));
             }
             int resetEnd = curMod.getLastGateNumber();
-            return new ExpressionObject(additionalLines, resetStart, resetEnd);
+            ExpressionObject newExp = new ExpressionObject(additionalLines, resetStart, resetEnd);
+            newExp.addSignals(exp.getContainedSignals());
+            return newExp;
         }
     }
 

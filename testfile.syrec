@@ -9,7 +9,7 @@ module testmodule1 (in a(3), in b(3), out c)
 	++=a;
 	--=b;
 	~=a;
-	a^=(b>>1)
+	a^=(a>>1)
 	
 	
 

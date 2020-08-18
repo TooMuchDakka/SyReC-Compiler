@@ -45,4 +45,8 @@ public class SignalObject {
         return lines.get(index);
     }
 
+    public ArrayList<String> getLines() {
+        return new ArrayList<>(lines);
+    }
+
 }
