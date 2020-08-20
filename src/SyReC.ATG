@@ -230,7 +230,15 @@ PRODUCTIONS
                                                         }.)
                             .
     ForStatement<ExpressionObject ifExp>        =   "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number<out int start> "to"] number<out int stop> ["step" ['-'] number<out int stepsize>] StatementList<ifExp> "rof".
-    IfStatement<ExpressionObject outsideIfExp>         =   "if" Expression<out ExpressionObject ifExp, outsideIfExp> "then" StatementList<ifExp> "else" StatementList<ifExp> "fi" Expression<out ExpressionObject fiExp, ifExp>.
+
+
+    IfStatement<ExpressionObject outsideIfExp>         =   "if" Expression<out ExpressionObject ifExp, outsideIfExp>                (.//TODO
+                                                                                                                                    .)
+                                                        "then" StatementList<ifExp>
+                                                        "else" StatementList<ifExp>
+                                                        "fi" Expression<out ExpressionObject fiExp, ifExp>.
+
+
     AssignStatement<SignalObject firstSignal, ExpressionObject ifExp>       =   ('^'|'+'|'-')                               (.String assignToggle = t.val;.)
                                                     '=' Expression<out ExpressionObject exp, ifExp>        (.boolean cantAssign = false;
                                                                                                     for(String line : firstSignal.getLines()) {
@@ -345,7 +353,7 @@ PRODUCTIONS
                                                                                                         }
                                                                                                         else {
                                                                                                             if(exp.signal.getWidth() == 1) {
-                                                                                                                unExp = codegen.notExp(exp, ifExp);
+                                                                                                                unExp = codegen.notExp(exp);
                                                                                                             }
                                                                                                             else {
                                                                                                                 SemErr("Logical Not on a Busline or an Expression that is not a boolean");
@@ -353,7 +361,7 @@ PRODUCTIONS
                                                                                                         }
                                                                                                     }
                                                                                                     else {
-                                                                                                        unExp = codegen.notExp(exp, ifExp);
+                                                                                                        unExp = codegen.notExp(exp);
                                                                                                     }.)
                                                     .
 
@@ -362,10 +370,10 @@ PRODUCTIONS
                                                   (shiftL                                           (.isLeft = true;.)
                                                   |shiftR
                                                   ) number<out int number> ')'                      (.if(isLeft) {
-                                                                                                        shiftExp = codegen.leftShift(exp, number, ifExp);
+                                                                                                        shiftExp = codegen.leftShift(exp, number);
                                                                                                     }
                                                                                                     else {
-                                                                                                        shiftExp = codegen.rightShift(exp, number, ifExp);
+                                                                                                        shiftExp = codegen.rightShift(exp, number);
                                                                                                     }.).
 
 

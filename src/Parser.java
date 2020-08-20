@@ -451,6 +451,7 @@ public class Parser {
 	void IfStatement(ExpressionObject outsideIfExp) {
 		Expect(42);
 		ExpressionObject ifExp = Expression(outsideIfExp);
+		
 		Expect(43);
 		StatementList(ifExp);
 		Expect(44);
@@ -619,10 +620,10 @@ public class Parser {
 		int number = number();
 		Expect(26);
 		if(isLeft) {
-		 shiftExp = codegen.leftShift(exp, number, ifExp);
+		 shiftExp = codegen.leftShift(exp, number);
 		}
 		else {
-		 shiftExp = codegen.rightShift(exp, number, ifExp);
+		 shiftExp = codegen.rightShift(exp, number);
 		}
 		return shiftExp;
 	}
@@ -733,7 +734,7 @@ public class Parser {
 		}
 		else {
 		if(exp.signal.getWidth() == 1) {
-		  unExp = codegen.notExp(exp, ifExp);
+		  unExp = codegen.notExp(exp);
 		}
 		else {
 		  SemErr("Logical Not on a Busline or an Expression that is not a boolean");
@@ -741,7 +742,7 @@ public class Parser {
 		}
 		}
 		else {
-		unExp = codegen.notExp(exp, ifExp);
+		unExp = codegen.notExp(exp);
 		}
 		return unExp;
 	}

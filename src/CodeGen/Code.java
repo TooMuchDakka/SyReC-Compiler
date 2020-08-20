@@ -185,13 +185,13 @@ public class Code {
         }
     }
 
-    public ExpressionObject leftShift(ExpressionObject exp, int number, ExpressionObject ifExp) {
+    public ExpressionObject leftShift(ExpressionObject exp, int number) {
         if(exp.isNumber) {
             return new ExpressionObject(exp.number << number);
         }
-        else if(!ifExp.isNumber || ifExp.number == 1){
+        else {
             SignalObject additionalLines = curMod.getAdditionalLines(exp.signal.getWidth());
-            int resetStart = getResetStart(exp);
+            int resetStart = exp.resetStart; //we have to also reset the gates from the previous expression
             for(int i = 0; i < exp.signal.getWidth()-number; i++) {
                 curMod.addGate(Toffoli, additionalLines.getLineName(i+number), exp.signal.getLineName(i));
             }
@@ -200,16 +200,15 @@ public class Code {
             newExp.addSignals(exp.getContainedSignals());
             return newExp;
         }
-        return new ExpressionObject(-1); //return error value, should never be used
     }
 
-    public ExpressionObject rightShift(ExpressionObject exp, int number, ExpressionObject ifExp) {
+    public ExpressionObject rightShift(ExpressionObject exp, int number) {
         if(exp.isNumber) {
             return new ExpressionObject(exp.number >> number);
         }
-        else if(!ifExp.isNumber || ifExp.number == 1){
+        else {
             SignalObject additionalLines = curMod.getAdditionalLines(exp.signal.getWidth());
-            int resetStart = getResetStart(exp);
+            int resetStart = exp.resetStart; //we have to also reset the gates from the previous expression
             for(int i = 0; i < exp.signal.getWidth()-number; i++) {
                 curMod.addGate(Toffoli, additionalLines.getLineName(i), exp.signal.getLineName(i+number));
             }
@@ -218,18 +217,16 @@ public class Code {
             newExp.addSignals(exp.getContainedSignals());
             return newExp;
         }
-        return new ExpressionObject(-1); //return error value, should never be used
     }
 
-    public ExpressionObject notExp(ExpressionObject exp, ExpressionObject ifExp) {
+    public ExpressionObject notExp(ExpressionObject exp) {
         //bitwise not on a number
         if(exp.isNumber) {
             return new ExpressionObject(~exp.number);
         }
-        //if the if expression is a boolean we can skip generating the expression because no assign will happen
-        else if(!ifExp.isNumber || ifExp.number == 1){
+        else {
             SignalObject additionalLines = curMod.getAdditionalLines(exp.signal.getWidth());
-            int resetStart = getResetStart(exp);
+            int resetStart = exp.resetStart; //we have to also reset the gates from the previous expression
             for(int i = 0; i < exp.signal.getWidth(); i++) {
                 ArrayList<String> controlLines = new ArrayList<>();
                 controlLines.add(exp.signal.getLineName(i));
@@ -241,7 +238,6 @@ public class Code {
             newExp.addSignals(exp.getContainedSignals());
             return newExp;
         }
-        return new ExpressionObject(-1); //return error value, should never be used
     }
 
     public void xorAssign(SignalObject firstSignal, ExpressionObject exp, ExpressionObject ifExp) {
