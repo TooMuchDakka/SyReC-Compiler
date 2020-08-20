@@ -619,11 +619,14 @@ public class Parser {
 		} else SynErr(66);
 		int number = number();
 		Expect(26);
-		if(isLeft) {
+		if(isLeft && (!ifExp.isNumber || ifExp.number == 1)) {
 		 shiftExp = codegen.leftShift(exp, number);
 		}
-		else {
+		else if(!isLeft && (!ifExp.isNumber || ifExp.number == 1)){
 		 shiftExp = codegen.rightShift(exp, number);
+		}
+		else {
+		 shiftExp = exp; //if the ifExp is neither a signal nor a boolean 1 we can skip the Expression because it wont be used
 		}
 		return shiftExp;
 	}
@@ -734,7 +737,12 @@ public class Parser {
 		}
 		else {
 		if(exp.signal.getWidth() == 1) {
-		  unExp = codegen.notExp(exp);
+		  if (!ifExp.isNumber || ifExp.number == 1) {
+		      unExp = codegen.notExp(exp);
+		  }
+		  else {
+		      unExp = exp; //if the ifExp is neither a signal nor a boolean 1 we can skip the Expression because it wont be used
+		  }
 		}
 		else {
 		  SemErr("Logical Not on a Busline or an Expression that is not a boolean");
@@ -742,7 +750,12 @@ public class Parser {
 		}
 		}
 		else {
+		if (!ifExp.isNumber || ifExp.number == 1) {
 		unExp = codegen.notExp(exp);
+		}
+		else {
+		unExp = exp; //if the ifExp is neither a signal nor a boolean 1 we can skip the Expression because it wont be used
+		}
 		}
 		return unExp;
 	}

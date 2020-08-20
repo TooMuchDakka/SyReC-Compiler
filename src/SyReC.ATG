@@ -353,7 +353,12 @@ PRODUCTIONS
                                                                                                         }
                                                                                                         else {
                                                                                                             if(exp.signal.getWidth() == 1) {
-                                                                                                                unExp = codegen.notExp(exp);
+                                                                                                                if (!ifExp.isNumber || ifExp.number == 1) {
+                                                                                                                    unExp = codegen.notExp(exp);
+                                                                                                                }
+                                                                                                                else {
+                                                                                                                    unExp = exp; //if the ifExp is neither a signal nor a boolean 1 we can skip the Expression because it wont be used
+                                                                                                                }
                                                                                                             }
                                                                                                             else {
                                                                                                                 SemErr("Logical Not on a Busline or an Expression that is not a boolean");
@@ -361,7 +366,12 @@ PRODUCTIONS
                                                                                                         }
                                                                                                     }
                                                                                                     else {
-                                                                                                        unExp = codegen.notExp(exp);
+                                                                                                        if (!ifExp.isNumber || ifExp.number == 1) {
+                                                                                                            unExp = codegen.notExp(exp);
+                                                                                                        }
+                                                                                                        else {
+                                                                                                            unExp = exp; //if the ifExp is neither a signal nor a boolean 1 we can skip the Expression because it wont be used
+                                                                                                        }
                                                                                                     }.)
                                                     .
 
@@ -369,11 +379,14 @@ PRODUCTIONS
     ShiftExpression<out ExpressionObject shiftExp, ExpressionObject ifExp>  =   '(' Expression<out ExpressionObject exp, ifExp>    (.boolean isLeft = false;.)
                                                   (shiftL                                           (.isLeft = true;.)
                                                   |shiftR
-                                                  ) number<out int number> ')'                      (.if(isLeft) {
+                                                  ) number<out int number> ')'                      (.if(isLeft && (!ifExp.isNumber || ifExp.number == 1)) {
                                                                                                         shiftExp = codegen.leftShift(exp, number);
                                                                                                     }
-                                                                                                    else {
+                                                                                                    else if(!isLeft && (!ifExp.isNumber || ifExp.number == 1)){
                                                                                                         shiftExp = codegen.rightShift(exp, number);
+                                                                                                    }
+                                                                                                    else {
+                                                                                                        shiftExp = exp; //if the ifExp is neither a signal nor a boolean 1 we can skip the Expression because it wont be used
                                                                                                     }.).
 
 
