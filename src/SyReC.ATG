@@ -185,14 +185,16 @@ PRODUCTIONS
     //Program and Modules
     SyReC               =   Module {Module}.
 
-    Module              =   "module" ident              (.//add module to SymTable
+    Module              =   "module" ident                                      (.//add module to SymTable
                                                         if(!tab.addModule(t.val)) {
                                                             SemErr("Module "+t.val+" is already defined");
                                                         }
                                                         curMod = tab.getModule(t.val);
-                                                        .)
-                            '(' ParameterList ')' {SignalList} (.codegen.createModule(curMod);.)
-                            StatementList               (.codegen.endModule(curMod);.).
+                                                                                .)
+                            '(' ParameterList ')' {SignalList}                  (.codegen.createModule(curMod);
+                                                                                ExpressionObject ifExp = new ExpressionObject(1); //generate alwaysTrue if
+                                                                                .)
+                            StatementList<ifExp>               (.codegen.endModule(curMod);.).
     ParameterList       =   Parameter {',' Parameter}.
     Parameter           =                               (.Obj.Kind kind = null;.)
                             ("in"                       (.kind = Obj.Kind.In;.)
@@ -213,8 +215,8 @@ PRODUCTIONS
                                            (.curMod.addObj(new Obj(kind, ident, width));.).
 
     //Statements
-    StatementList       =   Statement {';' Statement}.
-    Statement           =   CallStatement | ForStatement | IfStatement | UnaryStatement | SkipStatement | Signal<out SignalObject firstSig> (SwapStatement<firstSig> | AssignStatement<firstSig>).
+    StatementList<ExpressionObject ifExp>       =   Statement<ifExp> {';' Statement<ifExp>}.
+    Statement<ExpressionObject ifExp>           =   CallStatement | ForStatement<ifExp> | IfStatement<ifExp> | UnaryStatement<ifExp> | SkipStatement | Signal<out SignalObject firstSig, ifExp> (SwapStatement<firstSig, ifExp> | AssignStatement<firstSig, ifExp>).
     CallStatement       =   ("call"|"uncall") ident     (.Mod calledMod = tab.getModule(t.val);
                                                         if(calledMod == null) {
                                                             Warning("Module "+t.val+"was not defined before this point");
@@ -227,10 +229,10 @@ PRODUCTIONS
                                                             //Errorcheck for correct width needed
                                                         }.)
                             .
-    ForStatement        =   "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number<out int start> "to"] number<out int stop> ["step" ['-'] number<out int stepsize>] StatementList "rof".
-    IfStatement         =   "if" Expression<out ExpressionObject ifExp> "then" StatementList "else" StatementList "fi" Expression<out ExpressionObject fiExp>.
-    AssignStatement<SignalObject firstSignal>       =   ('^'|'+'|'-')                               (.String assignToggle = t.val;.)
-                                                    '=' Expression<out ExpressionObject exp>        (.boolean cantAssign = false;
+    ForStatement<ExpressionObject ifExp>        =   "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number<out int start> "to"] number<out int stop> ["step" ['-'] number<out int stepsize>] StatementList<ifExp> "rof".
+    IfStatement<ExpressionObject outsideIfExp>         =   "if" Expression<out ExpressionObject ifExp, outsideIfExp> "then" StatementList<ifExp> "else" StatementList<ifExp> "fi" Expression<out ExpressionObject fiExp, ifExp>.
+    AssignStatement<SignalObject firstSignal, ExpressionObject ifExp>       =   ('^'|'+'|'-')                               (.String assignToggle = t.val;.)
+                                                    '=' Expression<out ExpressionObject exp, ifExp>        (.boolean cantAssign = false;
                                                                                                     for(String line : firstSignal.getLines()) {
                                                                                                         if(exp.containsSignal(line)) {
                                                                                                       	    cantAssign = true;
@@ -249,7 +251,7 @@ PRODUCTIONS
                                                                                                     else {
                                                                                                         switch(assignToggle) {
                                                                                                             case "^":
-                                                                                                                codegen.xorAssign(firstSignal, exp);
+                                                                                                                codegen.xorAssign(firstSignal, exp, ifExp);
                                                                                                                 codegen.resetExpression(exp);
                                                                                                                 break;
                                                                                                             case "+":
@@ -262,31 +264,31 @@ PRODUCTIONS
                                                                                                     }.)
                                                     .
 
-    UnaryStatement      =   ('~'|"++"|"--")             (.String calcToggle = t.val;.)
-                            '=' Signal<out SignalObject sig>
+    UnaryStatement<ExpressionObject ifExp>      =   ('~'|"++"|"--")             (.String calcToggle = t.val;.)
+                                                '=' Signal<out SignalObject sig, ifExp>
                                                         (.switch(calcToggle) {
                                                             case "~":
-                                                                codegen.not(sig);
+                                                                codegen.not(sig, ifExp);
                                                                 break;
                                                             case "++":
-                                                                codegen.plusplus(sig);
+                                                                codegen.plusplus(sig, ifExp);
                                                                 break;
                                                             default:
-                                                                codegen.minusminus(sig);
+                                                                codegen.minusminus(sig, ifExp);
                                                                 break;
                                                         }.)
-                            .
+                                                .
 
-    SwapStatement<SignalObject firstSig>       =   "<=>" Signal<out SignalObject secondSig>
+    SwapStatement<SignalObject firstSig, ExpressionObject ifExp>       =   "<=>" Signal<out SignalObject secondSig, ifExp>
                                                         (. if(firstSig.getWidth() != secondSig.getWidth() ){
                                                             SemErr("Signal Width is not equal");
                                                         }
                                                         else {
-                                                            codegen.swap(firstSig, secondSig);
+                                                            codegen.swap(firstSig, secondSig, ifExp);
                                                         }.).
     SkipStatement       =   "skip".
     //placeholder, needs to be updated to allow arrays and width
-    Signal<out SignalObject sig>              =   ident         (.String ident = t.val;
+    Signal<out SignalObject sig, ExpressionObject ifExp>              =   ident         (.String ident = t.val;
                                                             if(!curMod.isDefined(ident)) {
                                                                 SemErr("Signal "+ident+" is not defined");
                                                             }
@@ -294,7 +296,7 @@ PRODUCTIONS
                                                             int startWidth = -1;
                                                             int endWidth = -1;
                                                             .)
-                            {'[' Expression<out ExpressionObject exp> ']'}
+                            {'[' Expression<out ExpressionObject exp, ifExp> ']'}
                             ['.' number<out int lowerBound> (.if(lowerBound >= curSignal.width || lowerBound < 0) {
                                                                 SemErr("Signal out of bounds: "+lowerBound);
                                                             }
@@ -313,23 +315,23 @@ PRODUCTIONS
                             .
 
     //Expressions
-    Expression<out ExpressionObject exp>                                                    (.exp = new ExpressionObject(0);.)
-                        = Signal<out SignalObject sig>                                      (.exp = new ExpressionObject(sig);.)
-                        | IF (IsShift()) ShiftExpression<out ExpressionObject shiftExp>     (.exp = shiftExp;.)
-                        | IF (IsBinary())BinaryExpression<out ExpressionObject binExp>      (.exp = binExp;.)
-                        | UnaryExpression<out ExpressionObject unExp>                       (.exp = unExp;.)
+    Expression<out ExpressionObject exp, ExpressionObject ifExp>                                                    (.exp = new ExpressionObject(0);.)
+                        = Signal<out SignalObject sig, ifExp>                                      (.exp = new ExpressionObject(sig);.)
+                        | IF (IsShift()) ShiftExpression<out ExpressionObject shiftExp, ifExp>     (.exp = shiftExp;.)
+                        | IF (IsBinary())BinaryExpression<out ExpressionObject binExp, ifExp>      (.exp = binExp;.)
+                        | UnaryExpression<out ExpressionObject unExp, ifExp>                       (.exp = unExp;.)
                         | number<out int number>                                            (.exp = new ExpressionObject(number);.)
                         .
 
 
-    BinaryExpression<out ExpressionObject binExp>                                           (.binExp = new ExpressionObject(0);.)
-                                                    =   '(' Expression<out ExpressionObject firstExp> ('+'|'-'|'^'|'*'|'/'|'%'|"*>"|"&&"|"||"|'&'|'|'|'<'|'>'|'='|"!="|"<="|">=") Expression<out ExpressionObject secondExp> ')'.
+    BinaryExpression<out ExpressionObject binExp, ExpressionObject ifExp>                                           (.binExp = new ExpressionObject(0);.)
+                                                    =   '(' Expression<out ExpressionObject firstExp, ifExp> ('+'|'-'|'^'|'*'|'/'|'%'|"*>"|"&&"|"||"|'&'|'|'|'<'|'>'|'='|"!="|"<="|">=") Expression<out ExpressionObject secondExp, ifExp> ')'.
 
 
-    UnaryExpression<out ExpressionObject unExp>     =                                               (.boolean bitwise = false;
+    UnaryExpression<out ExpressionObject unExp, ExpressionObject ifExp>     =                                               (.boolean bitwise = false;
                                                                                                     unExp = new ExpressionObject(0);.)
                                                     ('!'|'~'                                        (.bitwise = true;.)
-                                                    ) Expression<out ExpressionObject exp>          (.if(!bitwise) {
+                                                    ) Expression<out ExpressionObject exp, ifExp>          (.if(!bitwise) {
                                                                                                         if(exp.isNumber) {
                                                                                                             if(exp.number == 1) {
                                                                                                                 unExp = new ExpressionObject(0);
@@ -343,7 +345,7 @@ PRODUCTIONS
                                                                                                         }
                                                                                                         else {
                                                                                                             if(exp.signal.getWidth() == 1) {
-                                                                                                                unExp = codegen.notExp(exp);
+                                                                                                                unExp = codegen.notExp(exp, ifExp);
                                                                                                             }
                                                                                                             else {
                                                                                                                 SemErr("Logical Not on a Busline or an Expression that is not a boolean");
@@ -351,19 +353,19 @@ PRODUCTIONS
                                                                                                         }
                                                                                                     }
                                                                                                     else {
-                                                                                                        unExp = codegen.notExp(exp);
+                                                                                                        unExp = codegen.notExp(exp, ifExp);
                                                                                                     }.)
                                                     .
 
 
-    ShiftExpression<out ExpressionObject shiftExp>  =   '(' Expression<out ExpressionObject exp>    (.boolean isLeft = false;.)
+    ShiftExpression<out ExpressionObject shiftExp, ExpressionObject ifExp>  =   '(' Expression<out ExpressionObject exp, ifExp>    (.boolean isLeft = false;.)
                                                   (shiftL                                           (.isLeft = true;.)
                                                   |shiftR
                                                   ) number<out int number> ')'                      (.if(isLeft) {
-                                                                                                        shiftExp = codegen.leftShift(exp, number);
+                                                                                                        shiftExp = codegen.leftShift(exp, number, ifExp);
                                                                                                     }
                                                                                                     else {
-                                                                                                        shiftExp = codegen.rightShift(exp, number);
+                                                                                                        shiftExp = codegen.rightShift(exp, number, ifExp);
                                                                                                     }.).
 
 

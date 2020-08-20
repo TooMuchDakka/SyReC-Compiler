@@ -284,7 +284,7 @@ public class Parser {
 		   SemErr("Module "+t.val+" is already defined");
 		}
 		curMod = tab.getModule(t.val);
-		
+		                       
 		Expect(25);
 		ParameterList();
 		Expect(26);
@@ -292,7 +292,9 @@ public class Parser {
 			SignalList();
 		}
 		codegen.createModule(curMod);
-		StatementList();
+		ExpressionObject ifExp = new ExpressionObject(1); //generate alwaysTrue if
+		
+		StatementList(ifExp);
 		codegen.endModule(curMod);
 	}
 
@@ -320,11 +322,11 @@ public class Parser {
 		}
 	}
 
-	void StatementList() {
-		Statement();
+	void StatementList(ExpressionObject ifExp) {
+		Statement(ifExp);
 		while (la.kind == 36) {
 			Get();
-			Statement();
+			Statement(ifExp);
 		}
 	}
 
@@ -361,22 +363,22 @@ public class Parser {
 		curMod.addObj(new Obj(kind, ident, width));
 	}
 
-	void Statement() {
+	void Statement(ExpressionObject ifExp) {
 		switch (la.kind) {
 		case 37: case 38: {
 			CallStatement();
 			break;
 		}
 		case 39: {
-			ForStatement();
+			ForStatement(ifExp);
 			break;
 		}
 		case 42: {
-			IfStatement();
+			IfStatement(ifExp);
 			break;
 		}
 		case 46: case 47: case 48: {
-			UnaryStatement();
+			UnaryStatement(ifExp);
 			break;
 		}
 		case 50: {
@@ -384,11 +386,11 @@ public class Parser {
 			break;
 		}
 		case 1: {
-			SignalObject firstSig = Signal();
+			SignalObject firstSig = Signal(ifExp);
 			if (la.kind == 49) {
-				SwapStatement(firstSig);
+				SwapStatement(firstSig, ifExp);
 			} else if (la.kind == 6 || la.kind == 7 || la.kind == 8) {
-				AssignStatement(firstSig);
+				AssignStatement(firstSig, ifExp);
 			} else SynErr(60);
 			break;
 		}
@@ -423,7 +425,7 @@ public class Parser {
 		}
 	}
 
-	void ForStatement() {
+	void ForStatement(ExpressionObject ifExp) {
 		Expect(39);
 		if (IsIdentEql() || NumberTo()) {
 			if (IsIdentEql()) {
@@ -442,22 +444,22 @@ public class Parser {
 			}
 			int stepsize = number();
 		}
-		StatementList();
+		StatementList(ifExp);
 		Expect(41);
 	}
 
-	void IfStatement() {
+	void IfStatement(ExpressionObject outsideIfExp) {
 		Expect(42);
-		ExpressionObject ifExp = Expression();
+		ExpressionObject ifExp = Expression(outsideIfExp);
 		Expect(43);
-		StatementList();
+		StatementList(ifExp);
 		Expect(44);
-		StatementList();
+		StatementList(ifExp);
 		Expect(45);
-		ExpressionObject fiExp = Expression();
+		ExpressionObject fiExp = Expression(ifExp);
 	}
 
-	void UnaryStatement() {
+	void UnaryStatement(ExpressionObject ifExp) {
 		if (la.kind == 46) {
 			Get();
 		} else if (la.kind == 47) {
@@ -467,16 +469,16 @@ public class Parser {
 		} else SynErr(63);
 		String calcToggle = t.val;
 		Expect(19);
-		SignalObject sig = Signal();
+		SignalObject sig = Signal(ifExp);
 		switch(calcToggle) {
 		 case "~":
-		     codegen.not(sig);
+		     codegen.not(sig, ifExp);
 		     break;
 		 case "++":
-		     codegen.plusplus(sig);
+		     codegen.plusplus(sig, ifExp);
 		     break;
 		 default:
-		     codegen.minusminus(sig);
+		     codegen.minusminus(sig, ifExp);
 		     break;
 		}
 	}
@@ -485,7 +487,7 @@ public class Parser {
 		Expect(50);
 	}
 
-	SignalObject  Signal() {
+	SignalObject  Signal(ExpressionObject ifExp) {
 		SignalObject  sig;
 		Expect(1);
 		String ident = t.val;
@@ -498,7 +500,7 @@ public class Parser {
 		
 		while (la.kind == 34) {
 			Get();
-			ExpressionObject exp = Expression();
+			ExpressionObject exp = Expression(ifExp);
 			Expect(35);
 		}
 		if (la.kind == 51) {
@@ -527,18 +529,18 @@ public class Parser {
 		return sig;
 	}
 
-	void SwapStatement(SignalObject firstSig) {
+	void SwapStatement(SignalObject firstSig, ExpressionObject ifExp) {
 		Expect(49);
-		SignalObject secondSig = Signal();
+		SignalObject secondSig = Signal(ifExp);
 		if(firstSig.getWidth() != secondSig.getWidth() ){
 		SemErr("Signal Width is not equal");
 		}
 		else {
-		codegen.swap(firstSig, secondSig);
+		codegen.swap(firstSig, secondSig, ifExp);
 		}
 	}
 
-	void AssignStatement(SignalObject firstSignal) {
+	void AssignStatement(SignalObject firstSignal, ExpressionObject ifExp) {
 		if (la.kind == 8) {
 			Get();
 		} else if (la.kind == 6) {
@@ -548,53 +550,53 @@ public class Parser {
 		} else SynErr(64);
 		String assignToggle = t.val;
 		Expect(19);
-		ExpressionObject exp = Expression();
+		ExpressionObject exp = Expression(ifExp);
 		boolean cantAssign = false;
 		for(String line : firstSignal.getLines()) {
-		 if(exp.containsSignal(line)) {
-		    cantAssign = true;
-			break;
-		 }
+		if(exp.containsSignal(line)) {
+		cantAssign = true;
+		break;
+		}
 		}
 		if(cantAssign) {
-		 SemErr("Signal is contained in the Expression of the assign Statement");
+		SemErr("Signal is contained in the Expression of the assign Statement");
 		}
 		else if(!exp.isNumber && exp.signal.getWidth() != firstSignal.getWidth()) {
-		 SemErr("Signal Width is not equal");
+		SemErr("Signal Width is not equal");
 		}
 		else if(exp.isNumber && firstSignal.getWidth() < Math.ceil(Math.log(exp.number)/Math.log(2))) {
-		 SemErr(exp.number+" doesnt fit into the Signal Width");
+		SemErr(exp.number+" doesnt fit into the Signal Width");
 		}
 		else {
-		 switch(assignToggle) {
-		     case "^":
-		         codegen.xorAssign(firstSignal, exp);
-		         codegen.resetExpression(exp);
-		         break;
-		     case "+":
-		         //TODO +assign
-		         break;
-		     default:
-		         //TODO -assign
-		         break;
-		 }
+		switch(assignToggle) {
+		case "^":
+		  codegen.xorAssign(firstSignal, exp, ifExp);
+		  codegen.resetExpression(exp);
+		  break;
+		case "+":
+		  //TODO +assign
+		  break;
+		default:
+		  //TODO -assign
+		  break;
+		}
 		}
 	}
 
-	ExpressionObject  Expression() {
+	ExpressionObject  Expression(ExpressionObject ifExp) {
 		ExpressionObject  exp;
 		exp = new ExpressionObject(0);
 		if (la.kind == 1) {
-			SignalObject sig = Signal();
+			SignalObject sig = Signal(ifExp);
 			exp = new ExpressionObject(sig);
 		} else if (IsShift()) {
-			ExpressionObject shiftExp = ShiftExpression();
+			ExpressionObject shiftExp = ShiftExpression(ifExp);
 			exp = shiftExp;
 		} else if (IsBinary()) {
-			ExpressionObject binExp = BinaryExpression();
+			ExpressionObject binExp = BinaryExpression(ifExp);
 			exp = binExp;
 		} else if (la.kind == 46 || la.kind == 54) {
-			ExpressionObject unExp = UnaryExpression();
+			ExpressionObject unExp = UnaryExpression(ifExp);
 			exp = unExp;
 		} else if (StartOf(1)) {
 			int number = number();
@@ -603,10 +605,10 @@ public class Parser {
 		return exp;
 	}
 
-	ExpressionObject  ShiftExpression() {
+	ExpressionObject  ShiftExpression(ExpressionObject ifExp) {
 		ExpressionObject  shiftExp;
 		Expect(25);
-		ExpressionObject exp = Expression();
+		ExpressionObject exp = Expression(ifExp);
 		boolean isLeft = false;
 		if (la.kind == 5) {
 			Get();
@@ -617,19 +619,19 @@ public class Parser {
 		int number = number();
 		Expect(26);
 		if(isLeft) {
-		 shiftExp = codegen.leftShift(exp, number);
+		 shiftExp = codegen.leftShift(exp, number, ifExp);
 		}
 		else {
-		 shiftExp = codegen.rightShift(exp, number);
+		 shiftExp = codegen.rightShift(exp, number, ifExp);
 		}
 		return shiftExp;
 	}
 
-	ExpressionObject  BinaryExpression() {
+	ExpressionObject  BinaryExpression(ExpressionObject ifExp) {
 		ExpressionObject  binExp;
 		binExp = new ExpressionObject(0);
 		Expect(25);
-		ExpressionObject firstExp = Expression();
+		ExpressionObject firstExp = Expression(ifExp);
 		switch (la.kind) {
 		case 6: {
 			Get();
@@ -701,12 +703,12 @@ public class Parser {
 		}
 		default: SynErr(67); break;
 		}
-		ExpressionObject secondExp = Expression();
+		ExpressionObject secondExp = Expression(ifExp);
 		Expect(26);
 		return binExp;
 	}
 
-	ExpressionObject  UnaryExpression() {
+	ExpressionObject  UnaryExpression(ExpressionObject ifExp) {
 		ExpressionObject  unExp;
 		boolean bitwise = false;
 		unExp = new ExpressionObject(0);
@@ -716,30 +718,30 @@ public class Parser {
 			Get();
 			bitwise = true;
 		} else SynErr(68);
-		ExpressionObject exp = Expression();
+		ExpressionObject exp = Expression(ifExp);
 		if(!bitwise) {
-		 if(exp.isNumber) {
-		     if(exp.number == 1) {
-		         unExp = new ExpressionObject(0);
-		     }
-		     else if(exp.number == 0) {
-		         unExp = new ExpressionObject(1);
-		     }
-		     else {
-		         SemErr("Logical Not on a number that is not 0 or 1");
-		     }
-		 }
-		 else {
-		     if(exp.signal.getWidth() == 1) {
-		         unExp = codegen.notExp(exp);
-		     }
-		     else {
-		         SemErr("Logical Not on a Busline or an Expression that is not a boolean");
-		     }
-		 }
+		if(exp.isNumber) {
+		if(exp.number == 1) {
+		  unExp = new ExpressionObject(0);
+		}
+		else if(exp.number == 0) {
+		  unExp = new ExpressionObject(1);
 		}
 		else {
-		 unExp = codegen.notExp(exp);
+		  SemErr("Logical Not on a number that is not 0 or 1");
+		}
+		}
+		else {
+		if(exp.signal.getWidth() == 1) {
+		  unExp = codegen.notExp(exp, ifExp);
+		}
+		else {
+		  SemErr("Logical Not on a Busline or an Expression that is not a boolean");
+		}
+		}
+		}
+		else {
+		unExp = codegen.notExp(exp, ifExp);
 		}
 		return unExp;
 	}
