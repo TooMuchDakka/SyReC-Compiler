@@ -191,7 +191,7 @@ public class Code {
         }
         else {
             SignalObject additionalLines = curMod.getAdditionalLines(exp.signal.getWidth());
-            int resetStart = exp.resetStart; //we have to also reset the gates from the previous expression
+            int resetStart = getResetStart(exp);
             for(int i = 0; i < exp.signal.getWidth()-number; i++) {
                 curMod.addGate(Toffoli, additionalLines.getLineName(i+number), exp.signal.getLineName(i));
             }
@@ -208,7 +208,7 @@ public class Code {
         }
         else {
             SignalObject additionalLines = curMod.getAdditionalLines(exp.signal.getWidth());
-            int resetStart = exp.resetStart; //we have to also reset the gates from the previous expression
+            int resetStart = getResetStart(exp);
             for(int i = 0; i < exp.signal.getWidth()-number; i++) {
                 curMod.addGate(Toffoli, additionalLines.getLineName(i), exp.signal.getLineName(i+number));
             }
@@ -226,7 +226,7 @@ public class Code {
         }
         else {
             SignalObject additionalLines = curMod.getAdditionalLines(exp.signal.getWidth());
-            int resetStart = exp.resetStart; //we have to also reset the gates from the previous expression
+            int resetStart = getResetStart(exp);
             for(int i = 0; i < exp.signal.getWidth(); i++) {
                 ArrayList<String> controlLines = new ArrayList<>();
                 controlLines.add(exp.signal.getLineName(i));
