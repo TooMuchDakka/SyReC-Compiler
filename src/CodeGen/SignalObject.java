@@ -8,7 +8,7 @@ import java.util.ArrayList;
     //for busses appends the indexes to all elements
 public class SignalObject {
     private final ArrayList<String> lines;
-    private final String name;
+    public final String name;
 
 
 

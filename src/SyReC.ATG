@@ -232,11 +232,59 @@ PRODUCTIONS
     ForStatement<ExpressionObject ifExp>        =   "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number<out int start> "to"] number<out int stop> ["step" ['-'] number<out int stepsize>] StatementList<ifExp> "rof".
 
 
-    IfStatement<ExpressionObject outsideIfExp>         =   "if" Expression<out ExpressionObject ifExp, outsideIfExp>                (.//TODO
+    IfStatement<ExpressionObject outsideIfExp>         =   "if" Expression<out ExpressionObject ifExp, outsideIfExp>                (.codegen.resetExpressionNoLine(ifExp);
+                                                                                                                                    ExpressionObject combinedIf = new ExpressionObject(0);
+                                                                                                                                    if(ifExp.isNumber && (ifExp.number != 0 && ifExp.number != 1)) {
+                                                                                                                                        SemErr("if Expression is a number but neither 0 or 1");
+                                                                                                                                    }
+                                                                                                                                    else if(!ifExp.isNumber && ifExp.getWidth() != 1) {
+                                                                                                                                        SemErr("if Expression is a Signal with a Width of "+ifExp.getWidth()+" instead of 1");
+                                                                                                                                        ifExp = new ExpressionObject(0);
+                                                                                                                                    }
+                                                                                                                                    else if(!ifExp.isNumber && !outsideIfExp.isNumber) {
+                                                                                                                                        //both are signals so we dont want to combine them with the logical & function
+                                                                                                                                        combinedIf = new ExpressionObject(ifExp.signals.get(0));
+                                                                                                                                        combinedIf.addSignals(outsideIfExp.signals);
+                                                                                                                                    }
+                                                                                                                                    else {
+                                                                                                                                        //if neither or only one is a number we can just use the & function
+                                                                                                                                        combinedIf = codegen.logicalAnd(outsideIfExp, ifExp);
+                                                                                                                                    }
                                                                                                                                     .)
-                                                        "then" StatementList<ifExp>
-                                                        "else" StatementList<ifExp>
-                                                        "fi" Expression<out ExpressionObject fiExp, ifExp>.
+                                                        "then" StatementList<combinedIf>                                            (.if(ifExp.isNumber) {
+                                                                                                                                        if(ifExp.number == 0) {
+                                                                                                                                            ifExp = new ExpressionObject(1);
+                                                                                                                                        }
+                                                                                                                                        else {
+                                                                                                                                            ifExp = new ExpressionObject(0);
+                                                                                                                                        }
+                                                                                                                                    }
+                                                                                                                                    else if(!(outsideIfExp.isNumber && outsideIfExp.number == 0)) {
+                                                                                                                                        codegen.not(ifExp.signals.get(0), new ExpressionObject(1)); //invert if line
+                                                                                                                                    }
+                                                                                                                                    if (!ifExp.isNumber && !outsideIfExp.isNumber){
+                                                                                                                                        //both are signals so we dont want to combine them with the logical & function
+                                                                                                                                        combinedIf = new ExpressionObject(ifExp.signals.get(0));
+                                                                                                                                        combinedIf.addSignals(outsideIfExp.signals);
+                                                                                                                                    }
+                                                                                                                                    else {
+                                                                                                                                        //if neither or only one is a number we can just use the & function
+                                                                                                                                        combinedIf = codegen.logicalAnd(outsideIfExp, ifExp);
+                                                                                                                                    }
+                                                                                                                                    .)
+                                                        "else" StatementList<combinedIf>                                            (.if(!ifExp.isNumber && !(outsideIfExp.isNumber && outsideIfExp.number == 0)) { //we only need to invert back if its a line
+                                                                                                                                        //no inversion if outsideIf is always false
+                                                                                                                                        codegen.not(ifExp.signals.get(0), new ExpressionObject(1)); //invert if line
+                                                                                                                                    }
+                                                                                                                                    .)
+                                                        "fi" Expression<out ExpressionObject fiExp, ifExp>                          (.if(!ifExp.isNumber && !(outsideIfExp.isNumber && outsideIfExp.number == 0) && ifExp.resetStart != -1) {
+                                                                                                                                        //if the ifExpression is on a line we can reset the line
+                                                                                                                                        //no reset if the outside is always false
+                                                                                                                                        codegen.xorAssign(ifExp.signals.get(0), fiExp, new ExpressionObject(1));
+                                                                                                                                        codegen.resetLine(ifExp.getLineName(0));
+                                                                                                                                    }
+                                                                                                                                    .)
+                                                        .
 
 
     AssignStatement<SignalObject firstSignal, ExpressionObject ifExp>       =   ('^'|'+'|'-')                               (.String assignToggle = t.val;.)
@@ -250,7 +298,7 @@ PRODUCTIONS
                                                                                                     if(cantAssign) {
                                                                                                         SemErr("Signal is contained in the Expression of the assign Statement");
                                                                                                     }
-                                                                                                    else if(!exp.isNumber && exp.signal.getWidth() != firstSignal.getWidth()) {
+                                                                                                    else if(!exp.isNumber && exp.getWidth() != firstSignal.getWidth()) {
                                                                                                         SemErr("Signal Width is not equal");
                                                                                                     }
                                                                                                     else if(exp.isNumber && firstSignal.getWidth() < Math.ceil(Math.log(exp.number)/Math.log(2))) {
@@ -341,7 +389,7 @@ PRODUCTIONS
                                                     ('!'|'~'                                        (.bitwise = true;.)
                                                     ) Expression<out ExpressionObject exp, ifExp>          (.if(!bitwise) {
                                                                                                         if(exp.isNumber) {
-                                                                                                            if(exp.number == 1) {
+                                                                                                            if(exp.number != 0) {
                                                                                                                 unExp = new ExpressionObject(0);
                                                                                                             }
                                                                                                             else if(exp.number == 0) {
@@ -352,8 +400,8 @@ PRODUCTIONS
                                                                                                             }
                                                                                                         }
                                                                                                         else {
-                                                                                                            if(exp.signal.getWidth() == 1) {
-                                                                                                                if (!ifExp.isNumber || ifExp.number == 1) {
+                                                                                                            if(exp.getWidth() == 1) {
+                                                                                                                if (!ifExp.isNumber || ifExp.number != 0) {
                                                                                                                     unExp = codegen.notExp(exp);
                                                                                                                 }
                                                                                                                 else {
@@ -366,7 +414,7 @@ PRODUCTIONS
                                                                                                         }
                                                                                                     }
                                                                                                     else {
-                                                                                                        if (!ifExp.isNumber || ifExp.number == 1) {
+                                                                                                        if (!ifExp.isNumber || ifExp.number != 0) {
                                                                                                             unExp = codegen.notExp(exp);
                                                                                                         }
                                                                                                         else {
@@ -379,10 +427,10 @@ PRODUCTIONS
     ShiftExpression<out ExpressionObject shiftExp, ExpressionObject ifExp>  =   '(' Expression<out ExpressionObject exp, ifExp>    (.boolean isLeft = false;.)
                                                   (shiftL                                           (.isLeft = true;.)
                                                   |shiftR
-                                                  ) number<out int number> ')'                      (.if(isLeft && (!ifExp.isNumber || ifExp.number == 1)) {
+                                                  ) number<out int number> ')'                      (.if(isLeft && (!ifExp.isNumber || ifExp.number != 0)) {
                                                                                                         shiftExp = codegen.leftShift(exp, number);
                                                                                                     }
-                                                                                                    else if(!isLeft && (!ifExp.isNumber || ifExp.number == 1)){
+                                                                                                    else if(!isLeft && (!ifExp.isNumber || ifExp.number != 0)){
                                                                                                         shiftExp = codegen.rightShift(exp, number);
                                                                                                     }
                                                                                                     else {

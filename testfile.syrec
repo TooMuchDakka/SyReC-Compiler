@@ -14,5 +14,13 @@ module testmodule1 (in a(3), in b(3), out c)
 	
 	
 
-module testmodule2 (inout a, out b)
-	a <=> b
+module testmodule2 (inout a, in b, out c, out d)
+	if c then
+		if d then
+			a <=> b
+		else
+			++=b
+		fi d
+	else
+		++=a
+	fi c

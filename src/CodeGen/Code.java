@@ -3,6 +3,7 @@ package CodeGen;
 
 import SymTable.Mod;
 import SymTable.Obj;
+import sun.misc.Signal;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -135,7 +136,7 @@ public class Code {
                 if (ifExp.isNumber) {
                     curMod.addGate(Fredkin, targetLines);
                 } else {
-                    curMod.addGate(Fredkin, targetLines, ifExp.signal.getLines());
+                    curMod.addGate(Fredkin, targetLines, ifExp.getLines());
                 }
             }
         }
@@ -148,7 +149,7 @@ public class Code {
                 if (ifExp.isNumber) {
                     curMod.addGate(Toffoli, sig.getLineName(i));
                 } else {
-                    curMod.addGate(Toffoli, sig.getLineName(i), ifExp.signal.getLines());
+                    curMod.addGate(Toffoli, sig.getLineName(i), ifExp.getLines());
                 }
             }
         }
@@ -167,7 +168,7 @@ public class Code {
                     curMod.addGate(Toffoli, sig.getLineName(i),controlLines);
                 }
                 else {
-                    controlLines.addAll(ifExp.signal.getLines());
+                    controlLines.addAll(ifExp.getLines());
                     curMod.addGate(Toffoli, sig.getLineName(i),controlLines);
                 }
             }
@@ -190,14 +191,14 @@ public class Code {
             return new ExpressionObject(exp.number << number);
         }
         else {
-            SignalObject additionalLines = curMod.getAdditionalLines(exp.signal.getWidth());
+            SignalObject additionalLines = curMod.getAdditionalLines(exp.getWidth());
             int resetStart = getResetStart(exp);
-            for(int i = 0; i < exp.signal.getWidth()-number; i++) {
-                curMod.addGate(Toffoli, additionalLines.getLineName(i+number), exp.signal.getLineName(i));
+            for(int i = 0; i < exp.getWidth()-number; i++) {
+                curMod.addGate(Toffoli, additionalLines.getLineName(i+number), exp.getLineName(i));
             }
             int resetEnd = curMod.getLastGateNumber();
             ExpressionObject newExp = new ExpressionObject(additionalLines, resetStart, resetEnd);
-            newExp.addSignals(exp.getContainedSignals());
+            newExp.addContainedSignals(exp.getContainedSignals());
             return newExp;
         }
     }
@@ -207,14 +208,14 @@ public class Code {
             return new ExpressionObject(exp.number >> number);
         }
         else {
-            SignalObject additionalLines = curMod.getAdditionalLines(exp.signal.getWidth());
+            SignalObject additionalLines = curMod.getAdditionalLines(exp.getWidth());
             int resetStart = getResetStart(exp);
-            for(int i = 0; i < exp.signal.getWidth()-number; i++) {
-                curMod.addGate(Toffoli, additionalLines.getLineName(i), exp.signal.getLineName(i+number));
+            for(int i = 0; i < exp.getWidth()-number; i++) {
+                curMod.addGate(Toffoli, additionalLines.getLineName(i), exp.getLineName(i+number));
             }
             int resetEnd = curMod.getLastGateNumber();
             ExpressionObject newExp = new ExpressionObject(additionalLines, resetStart, resetEnd);
-            newExp.addSignals(exp.getContainedSignals());
+            newExp.addContainedSignals(exp.getContainedSignals());
             return newExp;
         }
     }
@@ -225,17 +226,17 @@ public class Code {
             return new ExpressionObject(~exp.number);
         }
         else {
-            SignalObject additionalLines = curMod.getAdditionalLines(exp.signal.getWidth());
+            SignalObject additionalLines = curMod.getAdditionalLines(exp.getWidth());
             int resetStart = getResetStart(exp);
-            for(int i = 0; i < exp.signal.getWidth(); i++) {
+            for(int i = 0; i < exp.getWidth(); i++) {
                 ArrayList<String> controlLines = new ArrayList<>();
-                controlLines.add(exp.signal.getLineName(i));
+                controlLines.add(exp.getLineName(i));
                 curMod.addGate(Toffoli, additionalLines.getLineName(i), controlLines);
                 curMod.addGate(Toffoli, additionalLines.getLineName(i));
             }
             int resetEnd = curMod.getLastGateNumber();
             ExpressionObject newExp = new ExpressionObject(additionalLines, resetStart, resetEnd);
-            newExp.addSignals(exp.getContainedSignals());
+            newExp.addContainedSignals(exp.getContainedSignals());
             return newExp;
         }
     }
@@ -252,7 +253,7 @@ public class Code {
                         }
                         else {
                             //if the if Expression is not a number we just add all ifs (multiple if nested) to the control lines
-                            curMod.addGate(Toffoli, firstSignal.getLineName(i), ifExp.signal.getLines());
+                            curMod.addGate(Toffoli, firstSignal.getLineName(i), ifExp.getLines());
                         }
                     }
                     number /= 2;
@@ -261,11 +262,11 @@ public class Code {
             else {
                 for(int i = 0; i < firstSignal.getWidth(); i++) {
                     if (ifExp.isNumber) {
-                        curMod.addGate(Toffoli, firstSignal.getLineName(i), exp.signal.getLineName(i));
+                        curMod.addGate(Toffoli, firstSignal.getLineName(i), exp.getLineName(i));
                     } else {
                         ArrayList<String> controlLines = new ArrayList<String>();
-                        controlLines.add(exp.signal.getLineName(i));
-                        controlLines.addAll(ifExp.signal.getLines());
+                        controlLines.add(exp.getLineName(i));
+                        controlLines.addAll(ifExp.getLines());
                         curMod.addGate(Toffoli, firstSignal.getLineName(i), controlLines);
                     }
                 }
@@ -273,16 +274,69 @@ public class Code {
         }
     }
 
+    public ExpressionObject logicalAnd(ExpressionObject firstExp, ExpressionObject secondExp) {
+        if(firstExp.isNumber && secondExp.isNumber) {
+            int newValue = firstExp.number == 1 && secondExp.number == 1?1:0;
+            return new ExpressionObject(newValue);
+        }
+        else if(firstExp.isNumber) {
+            if(firstExp.number == 0) {
+                return new ExpressionObject(0);
+            }
+            else {
+                return secondExp;
+            }
+        }
+        else if(secondExp.isNumber) {
+            if(secondExp.number == 0) {
+                return new ExpressionObject(0);
+            }
+            else {
+                return firstExp;
+            }
+        }
+        else {
+            SignalObject additionalLine = curMod.getAdditionalLines(1);
+            ArrayList<String> controlLines = new ArrayList<>();
+            controlLines.addAll(firstExp.getLines());
+            controlLines.addAll(secondExp.getLines());
+            int resetStart = getResetStart(firstExp); //we have to reset beginning from the first Expression
+            curMod.addGate(Toffoli, additionalLine.getLineName(0),controlLines);
+            int resetEnd = curMod.getLastGateNumber();
+            ExpressionObject newExp = new ExpressionObject(additionalLine, resetStart, resetEnd);
+            newExp.addContainedSignals(firstExp.getContainedSignals());
+            newExp.addContainedSignals(secondExp.getContainedSignals());
+            return newExp;
+        }
+    }
+
+
+
     public void resetExpression(ExpressionObject exp) {
         if(lineAware && exp.resetStart != -1) {
             //we have used the expression so we can now reverse it
             int start = curMod.getLastGateNumber()+1;
             curMod.addCopyOfGates(exp.resetStart, exp.resetEnd);
             curMod.reverseGates(start, curMod.getLastGateNumber());
-            for(int i = 0; i < exp.signal.getWidth(); i++) {
-                curMod.resetLine(exp.signal.getLineName(i));
+            for(int i = 0; i < exp.getWidth(); i++) {
+                curMod.resetLine(exp.getLineName(i));
             }
         }
+    }
+
+    public void resetExpressionNoLine(ExpressionObject exp) {
+        //resets the Expression without freeing the line
+        //used mainly for If Expressions because the lien is reset with fi
+        if(lineAware && exp.resetStart != -1) {
+            int start = curMod.getLastGateNumber()+1;
+            curMod.addCopyOfGates(exp.resetStart, exp.resetEnd);
+            curMod.reverseGates(start, curMod.getLastGateNumber());
+        }
+    }
+
+    public void resetLine(String lineName) {
+        //in If Expressions we can reset the line directly
+        curMod.resetLine(lineName);
     }
 
     private int getResetStart(ExpressionObject exp) {

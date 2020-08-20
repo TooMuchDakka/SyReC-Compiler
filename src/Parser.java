@@ -451,13 +451,64 @@ public class Parser {
 	void IfStatement(ExpressionObject outsideIfExp) {
 		Expect(42);
 		ExpressionObject ifExp = Expression(outsideIfExp);
+		codegen.resetExpressionNoLine(ifExp);
+		ExpressionObject combinedIf = new ExpressionObject(0);
+		if(ifExp.isNumber && (ifExp.number != 0 && ifExp.number != 1)) {
+		 SemErr("if Expression is a number but neither 0 or 1");
+		}
+		else if(!ifExp.isNumber && ifExp.getWidth() != 1) {
+		 SemErr("if Expression is a Signal with a Width of "+ifExp.getWidth()+" instead of 1");
+		 ifExp = new ExpressionObject(0);
+		}
+		else if(!ifExp.isNumber && !outsideIfExp.isNumber) {
+		 //both are signals so we dont want to combine them with the logical & function
+		 combinedIf = new ExpressionObject(ifExp.signals.get(0));
+		 combinedIf.addSignals(outsideIfExp.signals);
+		}
+		else {
+		 //if neither or only one is a number we can just use the & function
+		 combinedIf = codegen.logicalAnd(outsideIfExp, ifExp);
+		}
 		
 		Expect(43);
-		StatementList(ifExp);
+		StatementList(combinedIf);
+		if(ifExp.isNumber) {
+		 if(ifExp.number == 0) {
+		     ifExp = new ExpressionObject(1);
+		 }
+		 else {
+		     ifExp = new ExpressionObject(0);
+		 }
+		}
+		else if(!(outsideIfExp.isNumber && outsideIfExp.number == 0)) {
+		 codegen.not(ifExp.signals.get(0), new ExpressionObject(1)); //invert if line
+		}
+		if (!ifExp.isNumber && !outsideIfExp.isNumber){
+		 //both are signals so we dont want to combine them with the logical & function
+		 combinedIf = new ExpressionObject(ifExp.signals.get(0));
+		 combinedIf.addSignals(outsideIfExp.signals);
+		}
+		else {
+		 //if neither or only one is a number we can just use the & function
+		 combinedIf = codegen.logicalAnd(outsideIfExp, ifExp);
+		}
+		
 		Expect(44);
-		StatementList(ifExp);
+		StatementList(combinedIf);
+		if(!ifExp.isNumber && !(outsideIfExp.isNumber && outsideIfExp.number == 0)) { //we only need to invert back if its a line
+		 //no inversion if outsideIf is always false
+		 codegen.not(ifExp.signals.get(0), new ExpressionObject(1)); //invert if line
+		}
+		
 		Expect(45);
 		ExpressionObject fiExp = Expression(ifExp);
+		if(!ifExp.isNumber && !(outsideIfExp.isNumber && outsideIfExp.number == 0) && ifExp.resetStart != -1) {
+		 //if the ifExpression is on a line we can reset the line
+		 //no reset if the outside is always false
+		 codegen.xorAssign(ifExp.signals.get(0), fiExp, new ExpressionObject(1));
+		 codegen.resetLine(ifExp.getLineName(0));
+		}
+		
 	}
 
 	void UnaryStatement(ExpressionObject ifExp) {
@@ -562,7 +613,7 @@ public class Parser {
 		if(cantAssign) {
 		SemErr("Signal is contained in the Expression of the assign Statement");
 		}
-		else if(!exp.isNumber && exp.signal.getWidth() != firstSignal.getWidth()) {
+		else if(!exp.isNumber && exp.getWidth() != firstSignal.getWidth()) {
 		SemErr("Signal Width is not equal");
 		}
 		else if(exp.isNumber && firstSignal.getWidth() < Math.ceil(Math.log(exp.number)/Math.log(2))) {
@@ -619,10 +670,10 @@ public class Parser {
 		} else SynErr(66);
 		int number = number();
 		Expect(26);
-		if(isLeft && (!ifExp.isNumber || ifExp.number == 1)) {
+		if(isLeft && (!ifExp.isNumber || ifExp.number != 0)) {
 		 shiftExp = codegen.leftShift(exp, number);
 		}
-		else if(!isLeft && (!ifExp.isNumber || ifExp.number == 1)){
+		else if(!isLeft && (!ifExp.isNumber || ifExp.number != 0)){
 		 shiftExp = codegen.rightShift(exp, number);
 		}
 		else {
@@ -725,7 +776,7 @@ public class Parser {
 		ExpressionObject exp = Expression(ifExp);
 		if(!bitwise) {
 		if(exp.isNumber) {
-		if(exp.number == 1) {
+		if(exp.number != 0) {
 		  unExp = new ExpressionObject(0);
 		}
 		else if(exp.number == 0) {
@@ -736,8 +787,8 @@ public class Parser {
 		}
 		}
 		else {
-		if(exp.signal.getWidth() == 1) {
-		  if (!ifExp.isNumber || ifExp.number == 1) {
+		if(exp.getWidth() == 1) {
+		  if (!ifExp.isNumber || ifExp.number != 0) {
 		      unExp = codegen.notExp(exp);
 		  }
 		  else {
@@ -750,7 +801,7 @@ public class Parser {
 		}
 		}
 		else {
-		if (!ifExp.isNumber || ifExp.number == 1) {
+		if (!ifExp.isNumber || ifExp.number != 0) {
 		unExp = codegen.notExp(exp);
 		}
 		else {
