@@ -128,46 +128,70 @@ public class Code {
 
     //swap of two signals
     //function is only called if the width is equal
-    public void swap(SignalObject firstSig, SignalObject secondSig) {
-        for(int i = 0; i < firstSig.getWidth(); i++) {
-            ArrayList<String> targetLines = new ArrayList<String>(Arrays.asList(firstSig.getLineName(i), secondSig.getLineName(i)));
-            curMod.addGate(Fredkin, targetLines);
+    public void swap(SignalObject firstSig, SignalObject secondSig, ExpressionObject ifExp) {
+        if (!ifExp.isNumber || ifExp.number == 1) {
+            for(int i = 0; i < firstSig.getWidth(); i++) {
+                ArrayList<String> targetLines = new ArrayList<String>(Arrays.asList(firstSig.getLineName(i), secondSig.getLineName(i)));
+                if (ifExp.isNumber) {
+                    curMod.addGate(Fredkin, targetLines);
+                } else {
+                    curMod.addGate(Fredkin, targetLines, ifExp.signal.getLines());
+                }
+            }
         }
     }
 
     //negate given Signal
-    public void not(SignalObject sig) {
-        for(int i = 0; i < sig.getWidth(); i++) {
-            curMod.addGate(Toffoli, sig.getLineName(i));
+    public void not(SignalObject sig, ExpressionObject ifExp) {
+        if (!ifExp.isNumber || ifExp.number == 1) {
+            for(int i = 0; i < sig.getWidth(); i++) {
+                if (ifExp.isNumber) {
+                    curMod.addGate(Toffoli, sig.getLineName(i));
+                } else {
+                    curMod.addGate(Toffoli, sig.getLineName(i), ifExp.signal.getLines());
+                }
+            }
         }
     }
 
 
     //++= Statement
-    public void plusplus(SignalObject sig) {
-        for(int i = sig.getWidth()-1; i >= 0; i--) {
-            ArrayList<String> controlLines = new ArrayList<>();
-            for(int j = 0; j < i; j++) {
-                controlLines.add(sig.getLineName(j));
+    public void plusplus(SignalObject sig, ExpressionObject ifExp) {
+        if (!ifExp.isNumber || ifExp.number == 1) {
+            for(int i = sig.getWidth()-1; i >= 0; i--) {
+                ArrayList<String> controlLines = new ArrayList<>();
+                for(int j = 0; j < i; j++) {
+                    controlLines.add(sig.getLineName(j));
+                }
+                if(ifExp.isNumber) {
+                    curMod.addGate(Toffoli, sig.getLineName(i),controlLines);
+                }
+                else {
+                    controlLines.addAll(ifExp.signal.getLines());
+                    curMod.addGate(Toffoli, sig.getLineName(i),controlLines);
+                }
             }
-            curMod.addGate(Toffoli, sig.getLineName(i),controlLines);
         }
     }
 
     //--= Statement, plusplus but in reverse
-    public void minusminus(SignalObject sig) {
-        int lastGate = curMod.getLastGateNumber();
-        plusplus(sig);
-        curMod.reverseGates(lastGate+1, curMod.getLastGateNumber());
+    public void minusminus(SignalObject sig, ExpressionObject ifExp) {
+        if (!ifExp.isNumber || ifExp.number == 1) {
+            int lastGate = curMod.getLastGateNumber();
+            plusplus(sig, ifExp);
+            if(lastGate <= curMod.getLastGateNumber()) { //if lastGate stayed the same we didnt generate Gates (for example if the ifExp evaluated to 0
+                curMod.reverseGates(lastGate+1, curMod.getLastGateNumber());
+            }
+        }
     }
 
-    public ExpressionObject leftShift(ExpressionObject exp, int number) {
+    public ExpressionObject leftShift(ExpressionObject exp, int number, ExpressionObject ifExp) {
         if(exp.isNumber) {
             return new ExpressionObject(exp.number << number);
         }
-        else {
+        else if(!ifExp.isNumber || ifExp.number == 1){
             SignalObject additionalLines = curMod.getAdditionalLines(exp.signal.getWidth());
-            int resetStart = exp.resetStart; //we have to also reset the gates from the previous expression
+            int resetStart = getResetStart(exp);
             for(int i = 0; i < exp.signal.getWidth()-number; i++) {
                 curMod.addGate(Toffoli, additionalLines.getLineName(i+number), exp.signal.getLineName(i));
             }
@@ -176,15 +200,16 @@ public class Code {
             newExp.addSignals(exp.getContainedSignals());
             return newExp;
         }
+        return new ExpressionObject(-1); //return error value, should never be used
     }
 
-    public ExpressionObject rightShift(ExpressionObject exp, int number) {
+    public ExpressionObject rightShift(ExpressionObject exp, int number, ExpressionObject ifExp) {
         if(exp.isNumber) {
             return new ExpressionObject(exp.number >> number);
         }
-        else {
+        else if(!ifExp.isNumber || ifExp.number == 1){
             SignalObject additionalLines = curMod.getAdditionalLines(exp.signal.getWidth());
-            int resetStart = exp.resetStart; //we have to also reset the gates from the previous expression
+            int resetStart = getResetStart(exp);
             for(int i = 0; i < exp.signal.getWidth()-number; i++) {
                 curMod.addGate(Toffoli, additionalLines.getLineName(i), exp.signal.getLineName(i+number));
             }
@@ -193,16 +218,18 @@ public class Code {
             newExp.addSignals(exp.getContainedSignals());
             return newExp;
         }
+        return new ExpressionObject(-1); //return error value, should never be used
     }
 
-    public ExpressionObject notExp(ExpressionObject exp) {
+    public ExpressionObject notExp(ExpressionObject exp, ExpressionObject ifExp) {
         //bitwise not on a number
         if(exp.isNumber) {
             return new ExpressionObject(~exp.number);
         }
-        else {
+        //if the if expression is a boolean we can skip generating the expression because no assign will happen
+        else if(!ifExp.isNumber || ifExp.number == 1){
             SignalObject additionalLines = curMod.getAdditionalLines(exp.signal.getWidth());
-            int resetStart = exp.resetStart; //we have to also reset the gates from the previous expression
+            int resetStart = getResetStart(exp);
             for(int i = 0; i < exp.signal.getWidth(); i++) {
                 ArrayList<String> controlLines = new ArrayList<>();
                 controlLines.add(exp.signal.getLineName(i));
@@ -214,21 +241,38 @@ public class Code {
             newExp.addSignals(exp.getContainedSignals());
             return newExp;
         }
+        return new ExpressionObject(-1); //return error value, should never be used
     }
 
-    public void xorAssign(SignalObject firstSignal, ExpressionObject exp) {
-        if(exp.isNumber) {
-            int number = exp.number;
-            for(int i = 0; i < Math.ceil(Math.log(exp.number)/Math.log(2)); i++) {
-                if(number%2 == 1) {
-                    curMod.addGate(Toffoli, firstSignal.getLineName(i));
+    public void xorAssign(SignalObject firstSignal, ExpressionObject exp, ExpressionObject ifExp) {
+
+        if (!ifExp.isNumber || ifExp.number == 1) {
+            if(exp.isNumber) {
+                int number = exp.number;
+                for(int i = 0; i < Math.ceil(Math.log(exp.number)/Math.log(2)); i++) {
+                    if(number%2 == 1) {
+                        if(ifExp.isNumber) {
+                            curMod.addGate(Toffoli, firstSignal.getLineName(i));
+                        }
+                        else {
+                            //if the if Expression is not a number we just add all ifs (multiple if nested) to the control lines
+                            curMod.addGate(Toffoli, firstSignal.getLineName(i), ifExp.signal.getLines());
+                        }
+                    }
+                    number /= 2;
                 }
-                number /= 2;
             }
-        }
-        else {
-            for(int i = 0; i < firstSignal.getWidth(); i++) {
-                curMod.addGate(Toffoli, firstSignal.getLineName(i), exp.signal.getLineName(i));
+            else {
+                for(int i = 0; i < firstSignal.getWidth(); i++) {
+                    if (ifExp.isNumber) {
+                        curMod.addGate(Toffoli, firstSignal.getLineName(i), exp.signal.getLineName(i));
+                    } else {
+                        ArrayList<String> controlLines = new ArrayList<String>();
+                        controlLines.add(exp.signal.getLineName(i));
+                        controlLines.addAll(ifExp.signal.getLines());
+                        curMod.addGate(Toffoli, firstSignal.getLineName(i), controlLines);
+                    }
+                }
             }
         }
     }
@@ -243,5 +287,11 @@ public class Code {
                 curMod.resetLine(exp.signal.getLineName(i));
             }
         }
+    }
+
+    private int getResetStart(ExpressionObject exp) {
+        //if the Expression Object has gates to reset add them
+        //else only reset from the current gate
+        return exp.resetStart == -1?curMod.getLastGateNumber()+1:exp.resetStart;
     }
 }
