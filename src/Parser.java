@@ -505,8 +505,8 @@ public class Parser {
 		 //no reset if the outside is always false
 		 codegen.xorAssign(ifExp.signals.get(0), fiExp, new ExpressionObject(1));
 		 codegen.resetLine(ifExp.getLineName(0));
-		 codegen.resetExpression(fiExp);
 		}
+		codegen.resetExpression(fiExp);
 		
 	}
 
@@ -760,7 +760,7 @@ public class Parser {
 		String operation = t.val;
 		ExpressionObject secondExp = Expression(ifExp);
 		Expect(26);
-		if(!ifExp.isNumber || ifExp.number == 1) {
+		if(!ifExp.isNumber || ifExp.number != 0) {
 		 switch(operation) {
 		     //TODO missing binary Expressions
 		     case "+":

@@ -63,6 +63,9 @@ public class ExpressionObject {
     }
 
     public boolean containsSignal(String signalName) {
+        if(containedSignals == null) {
+            return false;
+        }
         return containedSignals.contains(signalName);
     }
 
