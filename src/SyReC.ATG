@@ -73,17 +73,16 @@ COMPILER SyReC
     private static final Set<Integer> BinExp = Set.of(_plus, _minus, _xor, _lmul, _divide, _rem, _hmul, _bitAND, _bitOR, _AND, _OR, _less, _greater, _eql, _neql, _leql, _geql);
         boolean IsBinary(){
             scanner.ResetPeek();
-            Token x = la;
             Token next = scanner.Peek();
-            if(la.kind != '(') {
+            if(!la.val.equals("(")) {
                 return false;
             }
                 int i = 1;
                 while (i > 0) {
-                    if(next.kind == '(') {
+                    if(next.val.equals("(")) {
                         i++;
                     }
-                    else if(next.kind == ')'){
+                    else if(next.val.equals(")")){
                         i--;
                     }
                     else if(i == 1 && BinExp.contains(next.kind)){
@@ -232,7 +231,7 @@ PRODUCTIONS
     ForStatement<ExpressionObject ifExp>        =   "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number<out int start> "to"] number<out int stop> ["step" ['-'] number<out int stepsize>] StatementList<ifExp> "rof".
 
 
-    IfStatement<ExpressionObject outsideIfExp>         =   "if" Expression<out ExpressionObject ifExp, outsideIfExp>                (.codegen.resetExpressionNoLine(ifExp);
+    IfStatement<ExpressionObject outsideIfExp>         =   "if" Expression<out ExpressionObject ifExp, outsideIfExp>                (.
                                                                                                                                     ExpressionObject combinedIf = new ExpressionObject(0);
                                                                                                                                     if(ifExp.isNumber && (ifExp.number != 0 && ifExp.number != 1)) {
                                                                                                                                         SemErr("if Expression is a number but neither 0 or 1");
@@ -282,6 +281,7 @@ PRODUCTIONS
                                                                                                                                         //no reset if the outside is always false
                                                                                                                                         codegen.xorAssign(ifExp.signals.get(0), fiExp, new ExpressionObject(1));
                                                                                                                                         codegen.resetLine(ifExp.getLineName(0));
+                                                                                                                                        codegen.resetExpression(fiExp);
                                                                                                                                     }
                                                                                                                                     .)
                                                         .
@@ -380,8 +380,54 @@ PRODUCTIONS
                         .
 
 
-    BinaryExpression<out ExpressionObject binExp, ExpressionObject ifExp>                                           (.binExp = new ExpressionObject(0);.)
-                                                    =   '(' Expression<out ExpressionObject firstExp, ifExp> ('+'|'-'|'^'|'*'|'/'|'%'|"*>"|"&&"|"||"|'&'|'|'|'<'|'>'|'='|"!="|"<="|">=") Expression<out ExpressionObject secondExp, ifExp> ')'.
+    BinaryExpression<out ExpressionObject binExp, ExpressionObject ifExp>                                                               (.binExp = new ExpressionObject(0);.)
+                                                    =   '(' Expression<out ExpressionObject firstExp, ifExp>
+                                                    ('+'|'-'|'^'|'*'|'/'|'%'|"*>"|"&&"|"||"|'&'|'|'|'<'|'>'|'='|"!="|"<="|">=")         (.String operation = t.val;.)
+                                                    Expression<out ExpressionObject secondExp, ifExp> ')'                               (.if(!ifExp.isNumber || ifExp.number == 1) {
+                                                                                                                                            switch(operation) {
+                                                                                                                                                //TODO missing binary Expressions
+                                                                                                                                                case "+":
+                                                                                                                                                    break;
+                                                                                                                                                case "-":
+                                                                                                                                                    break;
+                                                                                                                                                case "^":
+                                                                                                                                                    break;
+                                                                                                                                                case "*":
+                                                                                                                                                    break;
+                                                                                                                                                case "/":
+                                                                                                                                                    break;
+                                                                                                                                                case "%":
+                                                                                                                                                    break;
+                                                                                                                                                case "*>":
+                                                                                                                                                    break;
+                                                                                                                                                case "&&":
+                                                                                                                                                    binExp = codegen.logicalAnd(firstExp, secondExp);
+                                                                                                                                                    break;
+                                                                                                                                                case "||":
+                                                                                                                                                    binExp = codegen.logicalOr(firstExp, secondExp);
+                                                                                                                                                    break;
+                                                                                                                                                case "&":
+                                                                                                                                                    break;
+                                                                                                                                                case "|":
+                                                                                                                                                    break;
+                                                                                                                                                case "<":
+                                                                                                                                                    break;
+                                                                                                                                                case ">":
+                                                                                                                                                    break;
+                                                                                                                                                case "=":
+                                                                                                                                                    break;
+                                                                                                                                                case "!=":
+                                                                                                                                                    break;
+                                                                                                                                                case "<)":
+                                                                                                                                                    break;
+                                                                                                                                                case ">=":
+                                                                                                                                                    break;
+                                                                                                                                                default:
+                                                                                                                                                    break;
+                                                                                                                                            }
+                                                                                                                                        }
+                                                                                                                                        .)
+                                                    .
 
 
     UnaryExpression<out ExpressionObject unExp, ExpressionObject ifExp>     =                                               (.boolean bitwise = false;

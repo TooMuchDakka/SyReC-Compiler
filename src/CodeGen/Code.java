@@ -310,6 +310,47 @@ public class Code {
         }
     }
 
+    public ExpressionObject logicalOr(ExpressionObject firstExp, ExpressionObject secondExp) {
+        if(firstExp.isNumber && secondExp.isNumber) {
+            int newValue = firstExp.number == 1 || secondExp.number == 1?1:0;
+            return new ExpressionObject(newValue);
+        }
+        else if(firstExp.isNumber) {
+            if(firstExp.number == 1) {
+                return new ExpressionObject(1);
+            }
+            else {
+                return secondExp;
+            }
+        }
+        else if(secondExp.isNumber) {
+            if(secondExp.number == 1) {
+                return new ExpressionObject(1);
+            }
+            else {
+                return firstExp;
+            }
+        }
+        else {
+            SignalObject additionalLine = curMod.getAdditionalLines(1);
+            ArrayList<String> controlLines = new ArrayList<>();
+            controlLines.addAll(firstExp.getLines());
+            controlLines.addAll(secondExp.getLines());
+            int resetStart = getResetStart(firstExp); //we have to reset beginning from the first Expression
+            curMod.addGate(Toffoli, firstExp.getLineName(0)); // !a
+            curMod.addGate(Toffoli, secondExp.getLineName(0)); // !b
+            curMod.addGate(Toffoli, additionalLine.getLineName(0),controlLines); // a and b
+            curMod.addGate(Toffoli, additionalLine.getLineName(0)); //nand
+            curMod.addGate(Toffoli, firstExp.getLineName(0)); // !a to make the line usable again
+            curMod.addGate(Toffoli, secondExp.getLineName(0)); // !b to make the line usable again
+            int resetEnd = curMod.getLastGateNumber();
+            ExpressionObject newExp = new ExpressionObject(additionalLine, resetStart, resetEnd);
+            newExp.addContainedSignals(firstExp.getContainedSignals());
+            newExp.addContainedSignals(secondExp.getContainedSignals());
+            return newExp;
+        }
+    }
+
 
 
     public void resetExpression(ExpressionObject exp) {

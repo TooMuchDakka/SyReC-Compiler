@@ -111,17 +111,16 @@ public class Parser {
     private static final Set<Integer> BinExp = Set.of(_plus, _minus, _xor, _lmul, _divide, _rem, _hmul, _bitAND, _bitOR, _AND, _OR, _less, _greater, _eql, _neql, _leql, _geql);
         boolean IsBinary(){
             scanner.ResetPeek();
-            Token x = la;
             Token next = scanner.Peek();
-            if(la.kind != '(') {
+            if(!la.val.equals("(")) {
                 return false;
             }
                 int i = 1;
                 while (i > 0) {
-                    if(next.kind == '(') {
+                    if(next.val.equals("(")) {
                         i++;
                     }
-                    else if(next.kind == ')'){
+                    else if(next.val.equals(")")){
                         i--;
                     }
                     else if(i == 1 && BinExp.contains(next.kind)){
@@ -451,23 +450,22 @@ public class Parser {
 	void IfStatement(ExpressionObject outsideIfExp) {
 		Expect(42);
 		ExpressionObject ifExp = Expression(outsideIfExp);
-		codegen.resetExpressionNoLine(ifExp);
 		ExpressionObject combinedIf = new ExpressionObject(0);
 		if(ifExp.isNumber && (ifExp.number != 0 && ifExp.number != 1)) {
-		 SemErr("if Expression is a number but neither 0 or 1");
+		   SemErr("if Expression is a number but neither 0 or 1");
 		}
 		else if(!ifExp.isNumber && ifExp.getWidth() != 1) {
-		 SemErr("if Expression is a Signal with a Width of "+ifExp.getWidth()+" instead of 1");
-		 ifExp = new ExpressionObject(0);
+		   SemErr("if Expression is a Signal with a Width of "+ifExp.getWidth()+" instead of 1");
+		   ifExp = new ExpressionObject(0);
 		}
 		else if(!ifExp.isNumber && !outsideIfExp.isNumber) {
-		 //both are signals so we dont want to combine them with the logical & function
-		 combinedIf = new ExpressionObject(ifExp.signals.get(0));
-		 combinedIf.addSignals(outsideIfExp.signals);
+		   //both are signals so we dont want to combine them with the logical & function
+		   combinedIf = new ExpressionObject(ifExp.signals.get(0));
+		   combinedIf.addSignals(outsideIfExp.signals);
 		}
 		else {
-		 //if neither or only one is a number we can just use the & function
-		 combinedIf = codegen.logicalAnd(outsideIfExp, ifExp);
+		   //if neither or only one is a number we can just use the & function
+		   combinedIf = codegen.logicalAnd(outsideIfExp, ifExp);
 		}
 		
 		Expect(43);
@@ -507,6 +505,7 @@ public class Parser {
 		 //no reset if the outside is always false
 		 codegen.xorAssign(ifExp.signals.get(0), fiExp, new ExpressionObject(1));
 		 codegen.resetLine(ifExp.getLineName(0));
+		 codegen.resetExpression(fiExp);
 		}
 		
 	}
@@ -758,8 +757,53 @@ public class Parser {
 		}
 		default: SynErr(67); break;
 		}
+		String operation = t.val;
 		ExpressionObject secondExp = Expression(ifExp);
 		Expect(26);
+		if(!ifExp.isNumber || ifExp.number == 1) {
+		 switch(operation) {
+		     //TODO missing binary Expressions
+		     case "+":
+		         break;
+		     case "-":
+		         break;
+		     case "^":
+		         break;
+		     case "*":
+		         break;
+		     case "/":
+		         break;
+		     case "%":
+		         break;
+		     case "*>":
+		         break;
+		     case "&&":
+		         binExp = codegen.logicalAnd(firstExp, secondExp);
+		         break;
+		     case "||":
+		         binExp = codegen.logicalOr(firstExp, secondExp);
+		         break;
+		     case "&":
+		         break;
+		     case "|":
+		         break;
+		     case "<":
+		         break;
+		     case ">":
+		         break;
+		     case "=":
+		         break;
+		     case "!=":
+		         break;
+		     case "<)":
+		         break;
+		     case ">=":
+		         break;
+		     default:
+		         break;
+		 }
+		}
+		
 		return binExp;
 	}
 
