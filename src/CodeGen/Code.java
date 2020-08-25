@@ -157,7 +157,7 @@ public class Code {
 
 
     //++= Statement
-    public void plusplus(SignalObject sig, ExpressionObject ifExp) {
+    public void increment(SignalObject sig, ExpressionObject ifExp) {
         if (!ifExp.isNumber || ifExp.number == 1) {
             for(int i = sig.getWidth()-1; i >= 0; i--) {
                 ArrayList<String> controlLines = new ArrayList<>();
@@ -176,10 +176,10 @@ public class Code {
     }
 
     //--= Statement, plusplus but in reverse
-    public void minusminus(SignalObject sig, ExpressionObject ifExp) {
+    public void decrement(SignalObject sig, ExpressionObject ifExp) {
         if (!ifExp.isNumber || ifExp.number == 1) {
             int lastGate = curMod.getLastGateNumber();
-            plusplus(sig, ifExp);
+            increment(sig, ifExp);
             if(lastGate <= curMod.getLastGateNumber()) { //if lastGate stayed the same we didnt generate Gates (for example if the ifExp evaluated to 0
                 curMod.reverseGates(lastGate+1, curMod.getLastGateNumber());
             }

@@ -526,10 +526,10 @@ public class Parser {
 		     codegen.not(sig, ifExp);
 		     break;
 		 case "++":
-		     codegen.plusplus(sig, ifExp);
+		     codegen.increment(sig, ifExp);
 		     break;
 		 default:
-		     codegen.minusminus(sig, ifExp);
+		     codegen.decrement(sig, ifExp);
 		     break;
 		}
 	}
