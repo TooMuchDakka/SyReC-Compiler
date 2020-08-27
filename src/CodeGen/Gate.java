@@ -28,8 +28,16 @@ public class Gate {
         this.controlLines.addAll(controlLines);
     }
 
+    public void addControlLine(String controlLine) {
+        controlLines.add(controlLine);
+    }
+
     public void addTargetLines(ArrayList<String> targetLines) {
         this.targetLines.addAll(targetLines);
+    }
+
+    public void addTargetLine(String targetLine) {
+        targetLines.add(targetLine);
     }
 
     public ArrayList<String> getControlLines() {

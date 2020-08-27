@@ -1,48 +1,42 @@
 package CodeGen;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 
-public class ExpressionObject {
+public class ExpressionResult {
     //a Expression can either return a number or a Signal
     //to not use lines when an internal integer would suffice we wrap the signal or number in this object
+    //also has a list of all the gates to generate this line if needed
 
     public final boolean isNumber;
-    public final ArrayList<SignalObject> signals;
+    private final SignalObject signal; //lines of this
     public final int number;
-    public final int resetStart;    //start of the gates to reset after expression is used
-    public final int resetEnd;      //end of the gates to reset
+    public final ArrayList<Gate> gates;
     public final HashSet<String> containedSignals;  //used for Assignment checks
 
 
 
-    public ExpressionObject(SignalObject signal) {
+    public ExpressionResult(SignalObject signal) {
         isNumber = false;
-        signals = new ArrayList<>();
-        signals.add(signal);
+        this.signal = signal;
         number = -1;
-        resetStart = -1;
-        resetEnd = -1;
+        gates = null;
         containedSignals = new HashSet<>(signal.getLines());
     }
 
-    public ExpressionObject(SignalObject signal, int resetStart, int resetEnd) {
+    public ExpressionResult(SignalObject signal, ArrayList<Gate> gates) {
         isNumber = false;
-        signals = new ArrayList<>();
-        signals.add(signal);
+        this.signal = signal;
         number = -1;
-        this.resetStart = resetStart;
-        this.resetEnd = resetEnd;
+        this.gates = new ArrayList<>(gates);
         containedSignals = new HashSet<>(signal.getLines());
     }
 
-    public ExpressionObject(int number) {
+    public ExpressionResult(int number) {
         isNumber = true;
-        signals = null;
+        signal = null;
         this.number = number;
-        resetStart = -1;
-        resetEnd = -1;
+        gates = null;
         containedSignals = null;
     }
 
@@ -50,16 +44,9 @@ public class ExpressionObject {
         containedSignals.addAll(signals);
     }
 
-    public void addSignals(ArrayList<SignalObject> signals) {
-        this.signals.addAll(signals);
-    }
 
     public int getWidth() {
-        int width = 0;
-        for (SignalObject signal : signals) {
-            width += signal.getWidth();
-        }
-        return width;
+        return signal.getWidth();
     }
 
     public boolean containsSignal(String signalName) {
@@ -75,19 +62,12 @@ public class ExpressionObject {
 
 
     public String getLineName(int i) {
-        int j = 0;
-        while(signals.get(j).getWidth() < i) {
-            i -= signals.get(j).getWidth();
-            j++;
-        }
-        return signals.get(j).getLineName(i);
+        return signal.getLineName(i);
     }
 
     public ArrayList<String> getLines() {
         ArrayList<String> returnLines = new ArrayList<>();
-        for(SignalObject signal : signals) {
-            returnLines.addAll(signal.getLines());
-        }
+        returnLines.addAll(signal.getLines());
         return returnLines;
     }
 }
