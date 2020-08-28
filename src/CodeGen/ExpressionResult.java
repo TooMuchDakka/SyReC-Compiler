@@ -1,5 +1,7 @@
 package CodeGen;
 
+import AbstractSyntaxTree.SignalExpression;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 
@@ -9,55 +11,37 @@ public class ExpressionResult {
     //also has a list of all the gates to generate this line if needed
 
     public final boolean isNumber;
-    private final SignalObject signal; //lines of this
+    public final SignalExpression signal; //lines of this
     public final int number;
     public final ArrayList<Gate> gates;
-    public final HashSet<String> containedSignals;  //used for Assignment checks
 
 
 
-    public ExpressionResult(SignalObject signal) {
+    public ExpressionResult(SignalExpression signal) {
         isNumber = false;
         this.signal = signal;
         number = -1;
-        gates = null;
-        containedSignals = new HashSet<>(signal.getLines());
+        gates = new ArrayList<>();
     }
 
-    public ExpressionResult(SignalObject signal, ArrayList<Gate> gates) {
+    public ExpressionResult(SignalExpression signal, ArrayList<Gate> gates) {
         isNumber = false;
         this.signal = signal;
         number = -1;
         this.gates = new ArrayList<>(gates);
-        containedSignals = new HashSet<>(signal.getLines());
     }
 
     public ExpressionResult(int number) {
         isNumber = true;
         signal = null;
         this.number = number;
-        gates = null;
-        containedSignals = null;
+        gates = new ArrayList<>();
     }
 
-    public void addContainedSignals(ArrayList<String> signals) {
-        containedSignals.addAll(signals);
-    }
 
 
     public int getWidth() {
         return signal.getWidth();
-    }
-
-    public boolean containsSignal(String signalName) {
-        if(containedSignals == null) {
-            return false;
-        }
-        return containedSignals.contains(signalName);
-    }
-
-    public ArrayList<String> getContainedSignals() {
-        return new ArrayList<>(containedSignals);
     }
 
 

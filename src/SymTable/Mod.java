@@ -2,6 +2,7 @@ package SymTable;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 public class Mod {
@@ -10,6 +11,7 @@ public class Mod {
     public final String name;
     private int signalCount = 0; //count number of signals (for REAL format)
     private int parameterCount = 0; //count parameters for call
+    private HashSet<String> loopVars = new HashSet<>();
 
     private Map<String, Obj> locals = new HashMap<String, Obj>();
 
@@ -62,5 +64,19 @@ public class Mod {
     public HashMap<String, Obj> getLocals() {
         return new HashMap<String, Obj>(locals);
     }
+
+    public boolean loopVarDefined(String loopVar) {
+        return loopVars.contains(loopVar);
+    }
+
+    public void addLoopVar(String loopVar) {
+        loopVars.add(loopVar);
+    }
+
+    public void removeLoopVar(String loopVar) {
+        loopVars.remove(loopVar);
+    }
+
+
 
 }

@@ -17,7 +17,6 @@ module testmodule1 (in a(3), in b(3), out c)
 module testmodule2 (inout a, in b, out c, out d)
 	if (c||d) then
 		if d then
-			a <=> b;
 			a^=(b||c)
 		else
 			++=b

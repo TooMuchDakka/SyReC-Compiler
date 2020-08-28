@@ -5,7 +5,9 @@
     import SymTable.Mod;
     import CodeGen.Code;
     import CodeGen.SignalObject;
-    import CodeGen.ExpressionObject;
+    import CodeGen.ExpressionResult;
+    import AbstractSyntaxTree.*;
+    import java.util.ArrayList;
 
 COMPILER SyReC
 
@@ -70,7 +72,7 @@ COMPILER SyReC
             }
             return false;
     }
-    private static final Set<Integer> BinExp = Set.of(_plus, _minus, _xor, _lmul, _divide, _rem, _hmul, _bitAND, _bitOR, _AND, _OR, _less, _greater, _eql, _neql, _leql, _geql);
+    private static final Set<String> BinExp = Set.of("+", "-", "^", "*", "/", "%", "*>", "&&", "||", "&", "|", "<", ">", "=", "!=", "<=", ">=");
         boolean IsBinary(){
             scanner.ResetPeek();
             Token next = scanner.Peek();
@@ -85,7 +87,7 @@ COMPILER SyReC
                     else if(next.val.equals(")")){
                         i--;
                     }
-                    else if(i == 1 && BinExp.contains(next.kind)){
+                    else if(i == 1 && BinExp.contains(next.val)){
                         return true;
                     }
                     next = scanner.Peek();
@@ -107,6 +109,9 @@ COMPILER SyReC
         private void Warning (String msg) { //add Warning as function to not need to specify line and col
         		errors.Warning(t.line, t.col, msg);
         	}
+
+        private boolean lineAware = true; //to deactivate line Aware synthesis to save lines
+        private boolean costAware = true; //to deactivate cost Aware synthesis to save gates
 // If you want your generated compiler case insensitive add the
 // keyword IGNORECASE here.
 
@@ -122,23 +127,6 @@ TOKENS
     to      =   "to". //for LookAhead in ForStatement
     shiftR  =   ">>". //for LookAhead  in Expression (shift vs Binary)
     shiftL  =   "<<".
-    plus    =   '+'. // to differentiate between Expression and number
-    minus   =   '-'.
-    xor     =   '^'.
-    lmul    =   '*'.
-    divide  =   '/'.
-    rem     =   '%'.
-    hmul    =   "*>".
-    bitAND  =   "&%".
-    bitOR   =   "||".
-    AND     =   '&'.
-    OR      =   '|'.
-    less    =   '<'.
-    greater =   '>'.
-    eql     =   '='.
-    neql    =   "!=".
-    leql    =   "<=".
-    geql    =   ">=".
 
 
 
@@ -146,37 +134,50 @@ PRAGMAS
 // Add pragma declarations here.
 // Example:
 //   switch = '$' { digit | letter }. (. Optional semantic action .)
-    activateLine        =   "§lineOn".                  (.codegen.lineAware = true;.)
-    deactivateLine      =   "§lineOff".                 (.codegen.lineAware = false;.)
-    activateCost        =   "§costOn".                  (.codegen.costAware = true;.)
-    deactivateCost      =   "§costOff".                 (.codegen.costAware = false;.)
+    activateLine        =   "@lineOn".                  (.lineAware = true;.)
+    deactivateLine      =   "@lineOff".                 (.lineAware = false;.)
+    activateCost        =   "@costOn".                  (.costAware = true;.)
+    deactivateCost      =   "@costOff".                 (.costAware = false;.)
 
 COMMENTS FROM "//" TO "\n"
 IGNORE "\r" + "\n" + "\t"
 
 
 PRODUCTIONS
-    number<out int number>              =   (.number = 0;.)(int         (.number = Integer.parseInt(t.val);.)
-                                            |'#'ident                   (.number = curMod.getLocal(t.val).width;.)
-                                            |'$'ident   //placeholder for loops
-                                            |('('number<out int firstNumber> ('+'|'-'|'*'|'/')
-                                                                        (.char calcToggle = t.val.charAt(0);.)
-                                            number<out int secondNumber>      (.switch(calcToggle) {
-                                                                case '+':
-                                                                    number = firstNumber+secondNumber;
-                                                                    break;
-                                                                case '-':
-                                                                    number = firstNumber-secondNumber;
-                                                                    break;
-                                                                case '*':
-                                                                   number = firstNumber*secondNumber;
-                                                                    break;
-                                                                case '/':
-                                                                    number = firstNumber/secondNumber;
-                                                                    break;
-                                                                default:
-                                                                    number = 0;
-                                                                    break;
+    number<out NumberExpression number>     =                           (.number = new NumberExpression(0);.)
+                                            (int                        (.number = new NumberExpression(Integer.parseInt(t.val));.)
+                                            |'#'ident                   (.if(curMod.getLocal(t.val) == null) {
+                                                                            SemErr(t.val + "is not defined");
+                                                                            number = new NumberExpression(0);
+                                                                        }
+                                                                        else {
+                                                                            number = new NumberExpression(t.val, NumberExpression.Kind.BITWIDTH);
+                                                                        }.)
+                                            |'$'ident                   (.if(!curMod.loopVarDefined(t.val)) {
+                                                                            SemErr(t.val + "is not defined");
+                                                                            number = new NumberExpression(0);
+                                                                        }
+                                                                        else {
+                                                                            number = new NumberExpression(t.val, NumberExpression.Kind.LOOPVAR);
+                                                                        }.)
+                                            |('('number<out NumberExpression firstNumber> ('+'|'-'|'*'|'/')
+                                                                                            (.char calcToggle = t.val.charAt(0);.)
+                                            number<out NumberExpression secondNumber>       (.switch(calcToggle) {
+                                                                                            case '+':
+                                                                                                number = new NumberExpression(firstNumber, secondNumber, NumberExpression.Kind.PLUS);
+                                                                                                break;
+                                                                                            case '-':
+                                                                                                number = new NumberExpression(firstNumber, secondNumber, NumberExpression.Kind.MINUS);
+                                                                                                break;
+                                                                                            case '*':
+                                                                                                number = new NumberExpression(firstNumber, secondNumber, NumberExpression.Kind.TIMES);
+                                                                                                break;
+                                                                                            case '/':
+                                                                                                number = new NumberExpression(firstNumber, secondNumber, NumberExpression.Kind.DIVIDE);
+                                                                                                break;
+                                                                                            default:
+                                                                                                number = new NumberExpression(0);
+                                                                                                break;
                                                         }.)
                                             ')')).
     //number is a Production and not a Token because it is recursive
@@ -191,9 +192,11 @@ PRODUCTIONS
                                                         curMod = tab.getModule(t.val);
                                                                                 .)
                             '(' ParameterList ')' {SignalList}                  (.codegen.createModule(curMod);
-                                                                                ExpressionObject ifExp = new ExpressionObject(1); //generate alwaysTrue if
+                                                                                ExpressionResult ifExp = new ExpressionResult(1); //generate alwaysTrue if
                                                                                 .)
-                            StatementList<ifExp>               (.codegen.endModule(curMod);.).
+                            StatementList<.out ArrayList<Statement> statements.>               (.//TODO change addStatements to make more sense
+                                                                                                codegen.addStatements(statements);
+                                                                                                codegen.endModule(curMod);.).
     ParameterList       =   Parameter {',' Parameter}.
     Parameter           =                               (.Obj.Kind kind = null;.)
                             ("in"                       (.kind = Obj.Kind.In;.)
@@ -214,9 +217,22 @@ PRODUCTIONS
                                            (.curMod.addObj(new Obj(kind, ident, width));.).
 
     //Statements
-    StatementList<ExpressionObject ifExp>       =   Statement<ifExp> {';' Statement<ifExp>}.
-    Statement<ExpressionObject ifExp>           =   CallStatement | ForStatement<ifExp> | IfStatement<ifExp> | UnaryStatement<ifExp> | SkipStatement | Signal<out SignalObject firstSig, ifExp> (SwapStatement<firstSig, ifExp> | AssignStatement<firstSig, ifExp>).
-    CallStatement       =   ("call"|"uncall") ident     (.Mod calledMod = tab.getModule(t.val);
+    StatementList<.out ArrayList<Statement> statements.>       =   Statement<out Statement first>                  (.statements = new ArrayList<Statement>();
+                                                                                                                    statements.add(first);.)
+                                                                {';' Statement<out Statement additional>            (.statements.add(additional);.)
+                                                                }.
+
+    Statement<out Statement statement>                                                                                                                  (.statement = new SkipStatement(true);.)
+                                                = CallStatement<out Statement callStat>                                                                 (.statement = callStat;.)
+                                                | ForStatement<out Statement forStat>                                                                   (.statement = forStat;.)
+                                                | IfStatement<out Statement ifStat>                                                                     (.statement = ifStat;.)
+                                                | UnaryStatement<out Statement unaryStat>                                                               (.statement = unaryStat;.)
+                                                | SkipStatement<out Statement skipStat>                                                                 (.statement = skipStat;.)
+                                                | Signal<out SignalExpression firstSig> (SwapStatement<out Statement swapStat, firstSig>                (.statement = swapStat;.)
+                                                | AssignStatement<out Statement assignStat, firstSig>                                                   (.statement = assignStat;.)
+                                                ).
+    CallStatement<out Statement call>       =                           (.call = new SkipStatement(true);.)
+                                            ("call"|"uncall") ident     (.Mod calledMod = tab.getModule(t.val);
                                                         if(calledMod == null) {
                                                             Warning("Module "+t.val+"was not defined before this point");
                                                         }
@@ -228,67 +244,19 @@ PRODUCTIONS
                                                             //Errorcheck for correct width needed
                                                         }.)
                             .
-    ForStatement<ExpressionObject ifExp>        =   "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number<out int start> "to"] number<out int stop> ["step" ['-'] number<out int stepsize>] StatementList<ifExp> "rof".
+    ForStatement<out Statement forStatement>        =               (.forStatement = new SkipStatement(true);.)
+                                                    "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number<out NumberExpression start> "to"] number<out NumberExpression stop> ["step" ['-'] number<out NumberExpression stepsize>] StatementList<.out ArrayList<Statement> statements.> "rof".
 
 
-    IfStatement<ExpressionObject outsideIfExp>         =   "if" Expression<out ExpressionObject ifExp, outsideIfExp>                (.
-                                                                                                                                    ExpressionObject combinedIf = new ExpressionObject(0);
-                                                                                                                                    if(ifExp.isNumber && (ifExp.number != 0 && ifExp.number != 1)) {
-                                                                                                                                        SemErr("if Expression is a number but neither 0 or 1");
-                                                                                                                                    }
-                                                                                                                                    else if(!ifExp.isNumber && ifExp.getWidth() != 1) {
-                                                                                                                                        SemErr("if Expression is a Signal with a Width of "+ifExp.getWidth()+" instead of 1");
-                                                                                                                                        ifExp = new ExpressionObject(0);
-                                                                                                                                    }
-                                                                                                                                    else if(!ifExp.isNumber && !outsideIfExp.isNumber) {
-                                                                                                                                        //both are signals so we dont want to combine them with the logical & function
-                                                                                                                                        combinedIf = new ExpressionObject(ifExp.signals.get(0));
-                                                                                                                                        combinedIf.addSignals(outsideIfExp.signals);
-                                                                                                                                    }
-                                                                                                                                    else {
-                                                                                                                                        //if neither or only one is a number we can just use the & function
-                                                                                                                                        combinedIf = codegen.logicalAnd(outsideIfExp, ifExp);
-                                                                                                                                    }
-                                                                                                                                    .)
-                                                        "then" StatementList<combinedIf>                                            (.if(ifExp.isNumber) {
-                                                                                                                                        if(ifExp.number == 0) {
-                                                                                                                                            ifExp = new ExpressionObject(1);
-                                                                                                                                        }
-                                                                                                                                        else {
-                                                                                                                                            ifExp = new ExpressionObject(0);
-                                                                                                                                        }
-                                                                                                                                    }
-                                                                                                                                    else if(!(outsideIfExp.isNumber && outsideIfExp.number == 0)) {
-                                                                                                                                        codegen.not(ifExp.signals.get(0), new ExpressionObject(1)); //invert if line
-                                                                                                                                    }
-                                                                                                                                    if (!ifExp.isNumber && !outsideIfExp.isNumber){
-                                                                                                                                        //both are signals so we dont want to combine them with the logical & function
-                                                                                                                                        combinedIf = new ExpressionObject(ifExp.signals.get(0));
-                                                                                                                                        combinedIf.addSignals(outsideIfExp.signals);
-                                                                                                                                    }
-                                                                                                                                    else {
-                                                                                                                                        //if neither or only one is a number we can just use the & function
-                                                                                                                                        combinedIf = codegen.logicalAnd(outsideIfExp, ifExp);
-                                                                                                                                    }
-                                                                                                                                    .)
-                                                        "else" StatementList<combinedIf>                                            (.if(!ifExp.isNumber && !(outsideIfExp.isNumber && outsideIfExp.number == 0)) { //we only need to invert back if its a line
-                                                                                                                                        //no inversion if outsideIf is always false
-                                                                                                                                        codegen.not(ifExp.signals.get(0), new ExpressionObject(1)); //invert if line
-                                                                                                                                    }
-                                                                                                                                    .)
-                                                        "fi" Expression<out ExpressionObject fiExp, ifExp>                          (.if(!ifExp.isNumber && !(outsideIfExp.isNumber && outsideIfExp.number == 0) && ifExp.resetStart != -1) {
-                                                                                                                                        //if the ifExpression is on a line we can reset the line
-                                                                                                                                        //no reset if the outside is always false
-                                                                                                                                        codegen.xorAssign(ifExp.signals.get(0), fiExp, new ExpressionObject(1));
-                                                                                                                                        codegen.resetLine(ifExp.getLineName(0));
-                                                                                                                                    }
-                                                                                                                                    codegen.resetExpression(fiExp);
-                                                                                                                                    .)
+    IfStatement<out Statement ifStatement>         =   "if" Expression<out Expression ifExp>
+                                                        "then" StatementList<.out ArrayList<Statement> thenStatements.>
+                                                        "else" StatementList<.out ArrayList<Statement> elseStatements.>
+                                                        "fi" Expression<out Expression fiExp>                                   (.ifStatement = new IfStatement(ifExp, thenStatements, elseStatements, fiExp, lineAware);.)
                                                         .
 
 
-    AssignStatement<SignalObject firstSignal, ExpressionObject ifExp>       =   ('^'|'+'|'-')                               (.String assignToggle = t.val;.)
-                                                    '=' Expression<out ExpressionObject exp, ifExp>        (.boolean cantAssign = false;
+    AssignStatement<out Statement assign, SignalExpression firstSignal>       =   ('^'|'+'|'-')     (.String assignToggle = t.val;.)
+                                                    '=' Expression<out Expression exp>              (.boolean cantAssign = false;
                                                                                                     for(String line : firstSignal.getLines()) {
                                                                                                         if(exp.containsSignal(line)) {
                                                                                                       	    cantAssign = true;
@@ -297,191 +265,171 @@ PRODUCTIONS
                                                                                                     }
                                                                                                     if(cantAssign) {
                                                                                                         SemErr("Signal is contained in the Expression of the assign Statement");
+                                                                                                        assign = new SkipStatement(true);
                                                                                                     }
-                                                                                                    else if(!exp.isNumber && exp.getWidth() != firstSignal.getWidth()) {
-                                                                                                        SemErr("Signal Width is not equal");
-                                                                                                    }
-                                                                                                    else if(exp.isNumber && firstSignal.getWidth() < Math.ceil(Math.log(exp.number)/Math.log(2))) {
-                                                                                                        SemErr(exp.number+" doesnt fit into the Signal Width");
+                                                                                                    //TODO check if you can fit smaller numbers into signal
+                                                                                                    else if(firstSignal.getWidth() < exp.getWidth()) {
+                                                                                                        SemErr("Expression doesnt fit into the Signal Width");
+                                                                                                        assign = new SkipStatement(true);
                                                                                                     }
                                                                                                     else {
+                                                                                                        AssignStatement.Kind kind;
                                                                                                         switch(assignToggle) {
                                                                                                             case "^":
-                                                                                                                codegen.xorAssign(firstSignal, exp, ifExp);
-                                                                                                                codegen.resetExpression(exp);
+                                                                                                                kind = AssignStatement.Kind.XOR;
                                                                                                                 break;
                                                                                                             case "+":
-                                                                                                                //TODO +assign
+                                                                                                                kind = AssignStatement.Kind.PLUS;
                                                                                                                 break;
                                                                                                             default:
-                                                                                                                //TODO -assign
+                                                                                                                kind = AssignStatement.Kind.MINUS;
                                                                                                                 break;
                                                                                                         }
-                                                                                                    }.)
+                                                                                                        assign = new AssignStatement(firstSignal, exp, kind, lineAware);
+                                                                                                    }
+                                                                                                    .)
                                                     .
 
-    UnaryStatement<ExpressionObject ifExp>      =   ('~'|"++"|"--")             (.String calcToggle = t.val;.)
-                                                '=' Signal<out SignalObject sig, ifExp>
-                                                        (.switch(calcToggle) {
+    UnaryStatement<out Statement unary>      =   ('~'|"++"|"--")             (.String calcToggle = t.val;.)
+                                                '=' Signal<out SignalExpression sig>
+                                                        (.UnaryStatement.Kind kind;
+                                                        switch(calcToggle) {
                                                             case "~":
-                                                                codegen.not(sig, ifExp);
+                                                                kind = UnaryStatement.Kind.NEGATE;
                                                                 break;
                                                             case "++":
-                                                                codegen.increment(sig, ifExp);
+                                                                kind = UnaryStatement.Kind.INCREMENT;
                                                                 break;
                                                             default:
-                                                                codegen.decrement(sig, ifExp);
+                                                                kind = UnaryStatement.Kind.DECREMENT;
                                                                 break;
-                                                        }.)
+                                                        }
+                                                        unary = new UnaryStatement(sig, kind, lineAware);.)
                                                 .
 
-    SwapStatement<SignalObject firstSig, ExpressionObject ifExp>       =   "<=>" Signal<out SignalObject secondSig, ifExp>
-                                                        (. if(firstSig.getWidth() != secondSig.getWidth() ){
+    SwapStatement<out Statement swap, SignalExpression firstSig>       =   "<=>" Signal<out SignalExpression secondSig>
+                                                        (. if(false/*firstSig.getWidth() != secondSig.getWidth()*/ ){
                                                             SemErr("Signal Width is not equal");
+                                                            swap =  new SkipStatement(true);
                                                         }
                                                         else {
-                                                            codegen.swap(firstSig, secondSig, ifExp);
+                                                            swap = new SwapStatement(firstSig, secondSig, lineAware);
                                                         }.).
-    SkipStatement       =   "skip".
+    SkipStatement<out Statement skip>       =   "skip"      (.skip = new SkipStatement(true);.).
     //placeholder, needs to be updated to allow arrays and width
-    Signal<out SignalObject sig, ExpressionObject ifExp>              =   ident         (.String ident = t.val;
+    Signal<out SignalExpression sig> =   ident              (.String ident = t.val;
                                                             if(!curMod.isDefined(ident)) {
                                                                 SemErr("Signal "+ident+" is not defined");
                                                             }
                                                             Obj curSignal = curMod.getLocal(ident);
-                                                            int startWidth = -1;
-                                                            int endWidth = -1;
+                                                            NumberExpression startWidth = null;
+                                                            NumberExpression endWidth = null;
                                                             .)
-                            {'[' Expression<out ExpressionObject exp, ifExp> ']'}
-                            ['.' number<out int lowerBound> (.if(lowerBound >= curSignal.width || lowerBound < 0) {
-                                                                SemErr("Signal out of bounds: "+lowerBound);
+                            {'[' Expression<out Expression exp> ']'}
+                            ['.' number<out NumberExpression lowerBound> (.startWidth = lowerBound;
+                                                                        endWidth = lowerBound; //so far both are equal
+                                                                        .)
+                            [':' number<out NumberExpression upperBound>  (.endWidth = upperBound;.)
+                            ]]                                          (.if(startWidth == null) {
+                                                                            startWidth = new NumberExpression(0);
+                                                                            endWidth = new NumberExpression(curSignal.width -1);
                                                             }
-                                                            startWidth = lowerBound;
-                                                            endWidth = lowerBound; //so far both are equal
+                                                            sig = new SignalExpression (curSignal, startWidth, endWidth);
                                                             .)
-                            [':' number<out int uperBound>  (.if(uperBound >= curSignal.width || uperBound < 0) {
-                                                                SemErr("Signal out of bounds: "+uperBound);
-                                                            }
-                                                            endWidth = uperBound;.)
-                            ]]                              (.if(startWidth == -1) {
-                                                                startWidth = 0;
-                                                                endWidth = curSignal.width -1;
-                                                            }
-                                                            sig = new SignalObject (curSignal, startWidth, endWidth);.)
                             .
 
     //Expressions
-    Expression<out ExpressionObject exp, ExpressionObject ifExp>                                                    (.exp = new ExpressionObject(0);.)
-                        = Signal<out SignalObject sig, ifExp>                                      (.exp = new ExpressionObject(sig);.)
-                        | IF (IsShift()) ShiftExpression<out ExpressionObject shiftExp, ifExp>     (.exp = shiftExp;.)
-                        | IF (IsBinary())BinaryExpression<out ExpressionObject binExp, ifExp>      (.exp = binExp;.)
-                        | UnaryExpression<out ExpressionObject unExp, ifExp>                       (.exp = unExp;.)
-                        | number<out int number>                                            (.exp = new ExpressionObject(number);.)
+    Expression<out Expression exp>                                                      (.exp = new NumberExpression(0);.)
+                        = Signal<out SignalExpression sig>                              (.exp = sig;.)
+                        | IF (IsShift()) ShiftExpression<out Expression shiftExp>       (.exp = shiftExp;.)
+                        | IF (IsBinary())BinaryExpression<out Expression binExp>        (.exp = binExp;.)
+                        | UnaryExpression<out Expression unExp>                         (.exp = unExp;.)
+                        | number<out Expression numExp>                                 (.exp = numExp;.)
                         .
 
 
-    BinaryExpression<out ExpressionObject binExp, ExpressionObject ifExp>                                                               (.binExp = new ExpressionObject(0);.)
-                                                    =   '(' Expression<out ExpressionObject firstExp, ifExp>
-                                                    ('+'|'-'|'^'|'*'|'/'|'%'|"*>"|"&&"|"||"|'&'|'|'|'<'|'>'|'='|"!="|"<="|">=")         (.String operation = t.val;.)
-                                                    Expression<out ExpressionObject secondExp, ifExp> ')'                               (.if(!ifExp.isNumber || ifExp.number != 0) {
-                                                                                                                                            switch(operation) {
-                                                                                                                                                //TODO missing binary Expressions
-                                                                                                                                                case "+":
-                                                                                                                                                    break;
-                                                                                                                                                case "-":
-                                                                                                                                                    break;
-                                                                                                                                                case "^":
-                                                                                                                                                    break;
-                                                                                                                                                case "*":
-                                                                                                                                                    break;
-                                                                                                                                                case "/":
-                                                                                                                                                    break;
-                                                                                                                                                case "%":
-                                                                                                                                                    break;
-                                                                                                                                                case "*>":
-                                                                                                                                                    break;
-                                                                                                                                                case "&&":
-                                                                                                                                                    binExp = codegen.logicalAnd(firstExp, secondExp);
-                                                                                                                                                    break;
-                                                                                                                                                case "||":
-                                                                                                                                                    binExp = codegen.logicalOr(firstExp, secondExp);
-                                                                                                                                                    break;
-                                                                                                                                                case "&":
-                                                                                                                                                    break;
-                                                                                                                                                case "|":
-                                                                                                                                                    break;
-                                                                                                                                                case "<":
-                                                                                                                                                    break;
-                                                                                                                                                case ">":
-                                                                                                                                                    break;
-                                                                                                                                                case "=":
-                                                                                                                                                    break;
-                                                                                                                                                case "!=":
-                                                                                                                                                    break;
-                                                                                                                                                case "<)":
-                                                                                                                                                    break;
-                                                                                                                                                case ">=":
-                                                                                                                                                    break;
-                                                                                                                                                default:
-                                                                                                                                                    break;
-                                                                                                                                            }
+    BinaryExpression<out Expression binExp> =   '(' Expression<out Expression firstExp>
+                                                  ('+'|'-'|'^'|'*'|'/'|'%'|"*>"|"&&"|"||"|'&'|'|'|'<'|'>'|'='|"!="|"<="|">=")           (.String operation = t.val;.)
+                                                  Expression<out Expression secondExp> ')'                                              (.BinaryExpression.Kind kind = BinaryExpression.Kind.PLUS;
+                                                                                                                                        switch(operation) {
+                                                                                                                                          case "+":
+                                                                                                                                            kind = BinaryExpression.Kind.PLUS;
+                                                                                                                                            break;
+                                                                                                                                          case "-":
+                                                                                                                                            kind = BinaryExpression.Kind.MINUS;
+                                                                                                                                            break;
+                                                                                                                                          case "^":
+                                                                                                                                            kind = BinaryExpression.Kind.BIT_XOR;
+                                                                                                                                            break;
+                                                                                                                                          case "*":
+                                                                                                                                            kind = BinaryExpression.Kind.TIMES_UPPER;
+                                                                                                                                            break;
+                                                                                                                                          case "/":
+                                                                                                                                            kind = BinaryExpression.Kind.DIVIDE;
+                                                                                                                                            break;
+                                                                                                                                          case "%":
+                                                                                                                                            kind = BinaryExpression.Kind.REMAINDER;
+                                                                                                                                            break;
+                                                                                                                                          case "*>":
+                                                                                                                                            kind = BinaryExpression.Kind.TIMES_LOWER;
+                                                                                                                                            break;
+                                                                                                                                          case "&&":
+                                                                                                                                            kind = BinaryExpression.Kind.LOG_AND;
+                                                                                                                                            break;
+                                                                                                                                          case "||":
+                                                                                                                                            kind = BinaryExpression.Kind.LOG_OR;
+                                                                                                                                            break;
+                                                                                                                                          case "&":
+                                                                                                                                            kind = BinaryExpression.Kind.BIT_AND;
+                                                                                                                                            break;
+                                                                                                                                          case "|":
+                                                                                                                                            kind = BinaryExpression.Kind.BIT_OR;
+                                                                                                                                            break;
+                                                                                                                                          case "<":
+                                                                                                                                            kind = BinaryExpression.Kind.LESSER;
+                                                                                                                                            break;
+                                                                                                                                          case ">":
+                                                                                                                                            kind = BinaryExpression.Kind.GREATER;
+                                                                                                                                            break;
+                                                                                                                                          case "=":
+                                                                                                                                            kind = BinaryExpression.Kind.EQL;
+                                                                                                                                            break;
+                                                                                                                                          case "!=":
+                                                                                                                                            kind = BinaryExpression.Kind.NEQL;
+                                                                                                                                            break;
+                                                                                                                                          case "<)":
+                                                                                                                                            kind = BinaryExpression.Kind.LEQL;
+                                                                                                                                            break;
+                                                                                                                                          case ">=":
+                                                                                                                                            kind = BinaryExpression.Kind.GEQL;
+                                                                                                                                            break;
                                                                                                                                         }
+                                                                                                                                        binExp = new BinaryExpression(firstExp, secondExp, kind);
                                                                                                                                         .)
                                                     .
 
 
-    UnaryExpression<out ExpressionObject unExp, ExpressionObject ifExp>     =                                               (.boolean bitwise = false;
-                                                                                                    unExp = new ExpressionObject(0);.)
-                                                    ('!'|'~'                                        (.bitwise = true;.)
-                                                    ) Expression<out ExpressionObject exp, ifExp>          (.if(!bitwise) {
-                                                                                                        if(exp.isNumber) {
-                                                                                                            if(exp.number != 0) {
-                                                                                                                unExp = new ExpressionObject(0);
-                                                                                                            }
-                                                                                                            else if(exp.number == 0) {
-                                                                                                                unExp = new ExpressionObject(1);
-                                                                                                            }
-                                                                                                            else {
-                                                                                                                SemErr("Logical Not on a number that is not 0 or 1");
-                                                                                                            }
-                                                                                                        }
-                                                                                                        else {
-                                                                                                            if(exp.getWidth() == 1) {
-                                                                                                                if (!ifExp.isNumber || ifExp.number != 0) {
-                                                                                                                    unExp = codegen.notExp(exp);
-                                                                                                                }
-                                                                                                                else {
-                                                                                                                    unExp = exp; //if the ifExp is neither a signal nor a boolean 1 we can skip the Expression because it wont be used
-                                                                                                                }
-                                                                                                            }
-                                                                                                            else {
-                                                                                                                SemErr("Logical Not on a Busline or an Expression that is not a boolean");
-                                                                                                            }
-                                                                                                        }
-                                                                                                    }
-                                                                                                    else {
-                                                                                                        if (!ifExp.isNumber || ifExp.number != 0) {
-                                                                                                            unExp = codegen.notExp(exp);
-                                                                                                        }
-                                                                                                        else {
-                                                                                                            unExp = exp; //if the ifExp is neither a signal nor a boolean 1 we can skip the Expression because it wont be used
-                                                                                                        }
-                                                                                                    }.)
+    UnaryExpression<out Expression unExp>     =                                        (.UnaryExpression.Kind kind = UnaryExpression.Kind.LOGICAL;.)
+                                                    ('!'|'~'                                (.kind = UnaryExpression.Kind.BITWISE;.)
+                                                    ) Expression<out Expression exp>        (.if(kind == UnaryExpression.Kind.LOGICAL) {
+                                                                                                if(exp.getWidth() == 1) {
+                                                                                                    SemErr("Logical Not on a Busline or an Expression that is not a boolean");
+                                                                                                    unExp = new NumberExpression(0);
+                                                                                                }
+                                                                                                else {
+                                                                                                    unExp = new UnaryExpression(exp, kind);
+                                                                                                }
+                                                                                            }
+                                                                                            else {
+                                                                                                unExp = new UnaryExpression(exp, kind);
+                                                                                            }.)
                                                     .
 
 
-    ShiftExpression<out ExpressionObject shiftExp, ExpressionObject ifExp>  =   '(' Expression<out ExpressionObject exp, ifExp>    (.boolean isLeft = false;.)
-                                                  (shiftL                                           (.isLeft = true;.)
+    ShiftExpression<out Expression shiftExp>  =   '(' Expression<out Expression exp>           (.ShiftExpression.Kind kind = ShiftExpression.Kind.RIGHT;.)
+                                                  (shiftL                                           (.kind = ShiftExpression.Kind.LEFT;.)
                                                   |shiftR
-                                                  ) number<out int number> ')'                      (.if(isLeft && (!ifExp.isNumber || ifExp.number != 0)) {
-                                                                                                        shiftExp = codegen.leftShift(exp, number);
-                                                                                                    }
-                                                                                                    else if(!isLeft && (!ifExp.isNumber || ifExp.number != 0)){
-                                                                                                        shiftExp = codegen.rightShift(exp, number);
-                                                                                                    }
-                                                                                                    else {
-                                                                                                        shiftExp = exp; //if the ifExp is neither a signal nor a boolean 1 we can skip the Expression because it wont be used
-                                                                                                    }.).
+                                                  ) number<out NumberExpression number>             (.shiftExp = new ShiftExpression(exp, number, kind);.)')'.
 
 
 
