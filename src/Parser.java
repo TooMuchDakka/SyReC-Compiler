@@ -5,7 +5,7 @@ import SymTable.SymTable;
     import SymTable.Obj;
     import SymTable.Mod;
     import CodeGen.Code;
-import CodeGen.ExpressionResult;
+    import CodeGen.ExpressionResult;
     import AbstractSyntaxTree.*;
     import java.util.ArrayList;
 
@@ -37,21 +37,20 @@ public class Parser {
 
 	private boolean IsIdentEql(){
         scanner.ResetPeek();
-        return (la.kind == '$' && scanner.Peek().kind == _ident && scanner.Peek().kind == '=');
+        return (la.val.equals("$") && scanner.Peek().kind == _ident && scanner.Peek().val.equals("="));
     }
 
     private boolean NumberTo(){
         scanner.ResetPeek();
-        Token x = la;
         Token next = scanner.Peek();
         if(la.kind == _int) {
             return next.kind == _to;
         }
-        if(la.kind == '#' && next.kind == _ident) {
+        if(la.val.equals("#") && next.kind == _ident) {
             next = scanner.Peek();
             return next.kind == _to;
         }
-        if(la.kind == '$' && next.kind == _ident) {
+        if(la.val.equals("$") && next.kind == _ident) {
                     next = scanner.Peek();
                     return next.kind == _to;
         }
@@ -227,7 +226,7 @@ public class Parser {
 			Get();
 			Expect(1);
 			if(!curMod.loopVarDefined(t.val)) {
-			 SemErr(t.val + "is not defined");
+			 SemErr(t.val + " is not defined");
 			 number = new NumberExpression(0);
 			}
 			else {
@@ -445,26 +444,36 @@ public class Parser {
 
 	Statement  ForStatement() {
 		Statement  forStatement;
-		forStatement = new SkipStatement(true);
+		String ident = null;
+		NumberExpression from = new NumberExpression(0);
+		NumberExpression to = new NumberExpression(0);
+		NumberExpression step = new NumberExpression(1);
 		Expect(26);
 		if (IsIdentEql() || NumberTo()) {
 			if (IsIdentEql()) {
 				Expect(7);
 				Expect(1);
+				ident = t.val;
+				curMod.addLoopVar(ident);
 				Expect(27);
 			}
 			NumberExpression start = number();
+			from = start;
 			Expect(3);
 		}
 		NumberExpression stop = number();
+		to = stop;
 		if (la.kind == 28) {
 			Get();
 			if (la.kind == 10) {
 				Get();
 			}
-			NumberExpression stepsize = number();
+			NumberExpression stepSize = number();
+			step = stepSize;
 		}
 		ArrayList<Statement> statements = StatementList();
+		forStatement = new ForStatement(ident, from, to, step, statements, lineAware);
+		curMod.removeLoopVar(ident);
 		Expect(29);
 		return forStatement;
 	}

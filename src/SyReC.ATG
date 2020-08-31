@@ -4,7 +4,6 @@
     import SymTable.Obj;
     import SymTable.Mod;
     import CodeGen.Code;
-    import CodeGen.SignalObject;
     import CodeGen.ExpressionResult;
     import AbstractSyntaxTree.*;
     import java.util.ArrayList;
@@ -17,21 +16,20 @@ COMPILER SyReC
 
     private boolean IsIdentEql(){
         scanner.ResetPeek();
-        return (la.kind == '$' && scanner.Peek().kind == _ident && scanner.Peek().kind == '=');
+        return (la.val.equals("$") && scanner.Peek().kind == _ident && scanner.Peek().val.equals("="));
     }
 
     private boolean NumberTo(){
         scanner.ResetPeek();
-        Token x = la;
         Token next = scanner.Peek();
         if(la.kind == _int) {
             return next.kind == _to;
         }
-        if(la.kind == '#' && next.kind == _ident) {
+        if(la.val.equals("#") && next.kind == _ident) {
             next = scanner.Peek();
             return next.kind == _to;
         }
-        if(la.kind == '$' && next.kind == _ident) {
+        if(la.val.equals("$") && next.kind == _ident) {
                     next = scanner.Peek();
                     return next.kind == _to;
         }
@@ -154,7 +152,7 @@ PRODUCTIONS
                                                                             number = new NumberExpression(t.val, NumberExpression.Kind.BITWIDTH);
                                                                         }.)
                                             |'$'ident                   (.if(!curMod.loopVarDefined(t.val)) {
-                                                                            SemErr(t.val + "is not defined");
+                                                                            SemErr(t.val + " is not defined");
                                                                             number = new NumberExpression(0);
                                                                         }
                                                                         else {
@@ -244,8 +242,19 @@ PRODUCTIONS
                                                             //Errorcheck for correct width needed
                                                         }.)
                             .
-    ForStatement<out Statement forStatement>        =               (.forStatement = new SkipStatement(true);.)
-                                                    "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident '='] number<out NumberExpression start> "to"] number<out NumberExpression stop> ["step" ['-'] number<out NumberExpression stepsize>] StatementList<.out ArrayList<Statement> statements.> "rof".
+
+    ForStatement<out Statement forStatement>        =                                                                       (.String ident = null;
+                                                                                                                            NumberExpression from = new NumberExpression(0);
+                                                                                                                            NumberExpression to = new NumberExpression(0);
+                                                                                                                            NumberExpression step = new NumberExpression(1);.)
+                                                    "for" [IF(IsIdentEql() || NumberTo()) [IF (IsIdentEql())'$' ident       (.ident = t.val;
+                                                                                                                            curMod.addLoopVar(ident);.)
+                                                     '='] number<out NumberExpression start>                                (.from = start;.)
+                                                     "to"] number<out NumberExpression stop>                                (.to = stop;.)
+                                                     ["step" ['-'] number<out NumberExpression stepSize>                    (.step = stepSize;.)
+                                                     ] StatementList<.out ArrayList<Statement> statements.>                 (.forStatement = new ForStatement(ident, from, to, step, statements, lineAware);
+                                                                                                                            curMod.removeLoopVar(ident);.)
+                                                     "rof".
 
 
     IfStatement<out Statement ifStatement>         =   "if" Expression<out Expression ifExp>

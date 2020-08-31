@@ -5,20 +5,26 @@ import SymTable.Obj;
 
 import java.util.ArrayList;
 
-public class SignalExpression extends Expression{
+public class SignalExpression extends Expression {
 
     private final ArrayList<String> lines;
     public final String name;
     private final NumberExpression startWidth;
     private final NumberExpression endWidth;
+    private final boolean noBus;
+    private final int originalWidth;
 
     public SignalExpression(Obj obj, NumberExpression startWidth, NumberExpression endWidth) {
         //Constructor used when creating SignalExpression from InputCode
         this.name = obj.name;
         lines = new ArrayList<>();
-        if(obj.width == 1) {
+        if (obj.width == 1) {
+            noBus = true;
             lines.add(name);
+        } else {
+            noBus = false;
         }
+        originalWidth = obj.width;
         this.startWidth = startWidth;
         this.endWidth = endWidth;
     }
@@ -28,8 +34,10 @@ public class SignalExpression extends Expression{
         this.name = name;
         this.lines = new ArrayList<>(lines);
         containedSignals.addAll(this.getLines());
-        this.startWidth = new NumberExpression(0);
-        this.endWidth = new NumberExpression(lines.size()-1);
+        this.startWidth = null;
+        this.endWidth = null;
+        noBus = false;
+        originalWidth = -1;
     }
 
 
@@ -37,17 +45,23 @@ public class SignalExpression extends Expression{
     public ExpressionResult generate(CodeMod module) {
         int start = startWidth.generate(module).number;
         int end = endWidth.generate(module).number;
-        if(lines.size() == 1) {
-            //dummy: we already have the line
-        }
-        else if(start < end) {
-            for(int i = start; i <= end; i++) {
-                lines.add(name+"_"+i);
+        java.io.PrintStream errorStream = System.out;
+        if (noBus) {
+            if (start != end) {
+                errorStream.println("Signal " + name + " is not a Bus but is indexed from " + start + " to " + end);
             }
-        }
-        else{
-            for(int i = start; i >= end; i--) {
-                lines.add((name+"_"+i));
+        } else if (originalWidth != -1 && (start >= originalWidth || end >= originalWidth)) {
+            errorStream.println("Signal " + name + " index out of bounds.\nWidth is " + originalWidth + " and used index is from " + start + " to " + end);
+        } else {
+            lines.clear();
+            if (start < end) {
+                for (int i = start; i <= end; i++) {
+                    lines.add(name + "_" + i);
+                }
+            } else {
+                for (int i = start; i >= end; i--) {
+                    lines.add((name + "_" + i));
+                }
             }
         }
         containedSignals.addAll(this.getLines());

@@ -24,3 +24,9 @@ module testmodule2 (inout a, in b, out c, out d)
 	else
 		++=a
 	fi (c||d)
+	
+module testmodule3 (in a(3), in b(3), out c)
+	for $loopVar = 0 to 2
+		a.$loopVar <=> b.$loopVar;
+		~=c
+	rof
