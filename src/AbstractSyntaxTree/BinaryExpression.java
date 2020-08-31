@@ -73,8 +73,12 @@ public class BinaryExpression extends Expression{
 
             case LOG_AND:
                 if(firstRes.isNumber && secondRes.isNumber) {
-                    int newValue = firstRes.number == 1 && secondRes.number == 1?1:0;
-                    return new ExpressionResult(newValue);
+                    if(firstRes.number == 1 && secondRes.number == 1) {
+                        return new ExpressionResult(1);
+                    }
+                    else {
+                        return new ExpressionResult(0);
+                    }
                 }
                 else if(firstRes.isNumber) {
                     if(firstRes.number == 0) {

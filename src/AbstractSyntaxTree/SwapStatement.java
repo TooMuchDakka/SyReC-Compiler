@@ -7,8 +7,8 @@ import java.util.ArrayList;
 
 public class SwapStatement extends Statement {
 
-    private SignalExpression firstSignal;
-    private SignalExpression secondSignal;
+    private final SignalExpression firstSignal;
+    private final SignalExpression secondSignal;
 
     public SwapStatement(SignalExpression firstSignal, SignalExpression secondSignal, boolean lineAware) {
         super(lineAware);

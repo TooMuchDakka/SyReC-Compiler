@@ -7,11 +7,12 @@ import java.util.ArrayList;
 
 public class UnaryStatement extends Statement {
 
-    private SignalExpression signalExp;
+    private final SignalExpression signalExp;
 
     public enum Kind {
         NEGATE, INCREMENT, DECREMENT
     }
+
     private Kind kind;
 
     public UnaryStatement(SignalExpression signal, Kind kind, boolean lineAware) {

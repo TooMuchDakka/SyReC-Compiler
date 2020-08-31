@@ -5,7 +5,7 @@ import CodeGen.ExpressionResult;
 
 public class UnaryExpression extends Expression {
 
-    private Expression expression;
+    private final Expression expression;
 
     public enum Kind {
         LOGICAL, BITWISE
@@ -25,15 +25,13 @@ public class UnaryExpression extends Expression {
         usedLines.addAll(expression.usedLines);
         switch (kind) {
             case LOGICAL:
-                if(res.isNumber) {
-                    if(res.number == 0) {
+                if (res.isNumber) {
+                    if (res.number == 0) {
                         return new ExpressionResult(1);
-                    }
-                    else {
+                    } else {
                         return new ExpressionResult(0);
                     }
-                }
-                else {
+                } else {
                     SignalExpression notLine = module.getAdditionalLines(1);
                     usedLines.addAll(notLine.getLines());
                     ExpressionResult notRes = new ExpressionResult(notLine);
@@ -42,10 +40,9 @@ public class UnaryExpression extends Expression {
                     return notRes;
                 }
             case BITWISE:
-                if(res.isNumber) {
+                if (res.isNumber) {
                     return new ExpressionResult(~res.number);
-                }
-                else {
+                } else {
                     SignalExpression notLine = module.getAdditionalLines(res.getWidth());
                     usedLines.addAll(notLine.getLines());
                     ExpressionResult notRes = new ExpressionResult(notLine);
@@ -59,9 +56,8 @@ public class UnaryExpression extends Expression {
 
     @Override
     public int getWidth() {
-        if(kind == Kind.LOGICAL) {
+        if (kind == Kind.LOGICAL) {
             return 1;
-        }
-        else return expression.getWidth();
+        } else return expression.getWidth();
     }
 }
