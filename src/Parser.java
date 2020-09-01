@@ -8,6 +8,7 @@ import SymTable.SymTable;
     import CodeGen.ExpressionResult;
     import AbstractSyntaxTree.*;
     import java.util.ArrayList;
+    import java.util.HashMap;
 
 
 
@@ -117,12 +118,11 @@ public class Parser {
         Mod curMod;
 
         private String fileName = null;
-        Code codegen = null;
         public void setName(String name){
             fileName = name;
-            codegen = new Code(fileName);
         }
 
+        private HashMap<String, CodeMod> finishedModules = new HashMap<>();
 
 
         private void Warning (String msg) { //add Warning as function to not need to specify line and col
@@ -289,12 +289,13 @@ public class Parser {
 		while (la.kind == 19 || la.kind == 20) {
 			SignalList();
 		}
-		codegen.createModule(curMod);
+		CodeMod codeModule = Code.createModule(curMod);
+		finishedModules.put(curMod.name, codeModule);
 		ExpressionResult ifExp = new ExpressionResult(1); //generate alwaysTrue if
 		
 		ArrayList<Statement> statements = StatementList();
-		codegen.addStatements(statements);
-		codegen.endModule(curMod);
+		codeModule.addStatements(statements);
+		Code.endModule(fileName, curMod, codeModule);
 	}
 
 	void ParameterList() {
@@ -415,30 +416,50 @@ public class Parser {
 	Statement  CallStatement() {
 		Statement  call;
 		call = new SkipStatement(true);
+		CallStatement.Kind kind = CallStatement.Kind.CALL;
 		if (la.kind == 24) {
 			Get();
 		} else if (la.kind == 25) {
 			Get();
+			kind = CallStatement.Kind.UNCALL;
 		} else SynErr(61);
 		Expect(1);
 		Mod calledMod = tab.getModule(t.val);
 		if(calledMod == null) {
-		Warning("Module "+t.val+"was not defined before this point");
+		 Warning("Module "+t.val+"was not defined before this point");
 		}
 		
 		Expect(8);
 		Expect(1);
 		int parCount = 1;
+		ArrayList<String> idents = new ArrayList<>();
+		idents.add(t.val);
 		while (la.kind == 15) {
 			Get();
 			Expect(1);
 			parCount++;
+			idents.add(t.val);
 		}
 		Expect(13);
-		if(calledMod != null && parCount != calledMod.getParameterCount()) {
-		 SemErr("Module "+calledMod.name+"needs "+calledMod.getParameterCount()+" parameters");
-		 //Errorcheck for correct width needed
+		if(calledMod != null && parCount != calledMod.getSignalCount()) {
+		 SemErr("Module "+calledMod.name+"needs "+calledMod.getSignalCount()+" signals");
+		} else if(calledMod != null) {
+		 ArrayList<Obj> calledLocals = calledMod.getSignals();
+		 boolean noError = true;
+		 for(int i = 0; i < calledLocals.size(); i++) {
+		     Obj calledLocal = calledLocals.get(i);
+		     Obj usedLine = curMod.getLocal(idents.get(i));
+		     if(calledLocal.width != usedLine.width) {
+		         SemErr("Original Line "+calledLocal.name+" has a width of "+calledLocal.width+" and usedLine "+usedLine.name+" has a width of "+usedLine.width);
+		         noError = false;
+		     }
+		 }
+		 if(noError) {
+		     ArrayList<Statement> statements = finishedModules.get(calledMod.name).getStatements();
+		     call = new CallStatement(calledMod, curMod, idents, statements, kind, lineAware);
+		 }
 		}
+		
 		return call;
 	}
 

@@ -7,6 +7,7 @@
     import CodeGen.ExpressionResult;
     import AbstractSyntaxTree.*;
     import java.util.ArrayList;
+    import java.util.HashMap;
 
 COMPILER SyReC
 
@@ -96,12 +97,11 @@ COMPILER SyReC
         Mod curMod;
 
         private String fileName = null;
-        Code codegen = null;
         public void setName(String name){
             fileName = name;
-            codegen = new Code(fileName);
         }
 
+        private HashMap<String, CodeMod> finishedModules = new HashMap<>();
 
 
         private void Warning (String msg) { //add Warning as function to not need to specify line and col
@@ -189,12 +189,13 @@ PRODUCTIONS
                                                         }
                                                         curMod = tab.getModule(t.val);
                                                                                 .)
-                            '(' ParameterList ')' {SignalList}                  (.codegen.createModule(curMod);
+                            '(' ParameterList ')' {SignalList}                  (.CodeMod codeModule = Code.createModule(curMod);
+                                                                                finishedModules.put(curMod.name, codeModule);
                                                                                 ExpressionResult ifExp = new ExpressionResult(1); //generate alwaysTrue if
                                                                                 .)
                             StatementList<.out ArrayList<Statement> statements.>               (.//TODO change addStatements to make more sense
-                                                                                                codegen.addStatements(statements);
-                                                                                                codegen.endModule(curMod);.).
+                                                                                                codeModule.addStatements(statements);
+                                                                                                Code.endModule(fileName, curMod, codeModule);.).
     ParameterList       =   Parameter {',' Parameter}.
     Parameter           =                               (.Obj.Kind kind = null;.)
                             ("in"                       (.kind = Obj.Kind.In;.)
@@ -229,18 +230,38 @@ PRODUCTIONS
                                                 | Signal<out SignalExpression firstSig> (SwapStatement<out Statement swapStat, firstSig>                (.statement = swapStat;.)
                                                 | AssignStatement<out Statement assignStat, firstSig>                                                   (.statement = assignStat;.)
                                                 ).
-    CallStatement<out Statement call>       =                           (.call = new SkipStatement(true);.)
-                                            ("call"|"uncall") ident     (.Mod calledMod = tab.getModule(t.val);
+    CallStatement<out Statement call>       =                           (.call = new SkipStatement(true);
+                                                                        CallStatement.Kind kind = CallStatement.Kind.CALL;.)
+                                            ("call"|"uncall"            (.kind = CallStatement.Kind.UNCALL;.)
+                                            ) ident     (.Mod calledMod = tab.getModule(t.val);
                                                         if(calledMod == null) {
                                                             Warning("Module "+t.val+"was not defined before this point");
                                                         }
                                                         .)
-                            '(' ident                   (.int parCount = 1;.)
-                            {',' ident                  (.parCount++;.)
-                            } ')'                       (.if(calledMod != null && parCount != calledMod.getParameterCount()) {
-                                                            SemErr("Module "+calledMod.name+"needs "+calledMod.getParameterCount()+" parameters");
-                                                            //Errorcheck for correct width needed
-                                                        }.)
+                            '(' ident                   (.int parCount = 1;
+                                                        ArrayList<String> idents = new ArrayList<>();
+                                                        idents.add(t.val);.)
+                            {',' ident                  (.parCount++;
+                                                        idents.add(t.val);.)
+                            } ')'                       (.if(calledMod != null && parCount != calledMod.getSignalCount()) {
+                                                            SemErr("Module "+calledMod.name+"needs "+calledMod.getSignalCount()+" signals");
+                                                        } else if(calledMod != null) {
+                                                            ArrayList<Obj> calledLocals = calledMod.getSignals();
+                                                            boolean noError = true;
+                                                            for(int i = 0; i < calledLocals.size(); i++) {
+                                                                Obj calledLocal = calledLocals.get(i);
+                                                                Obj usedLine = curMod.getLocal(idents.get(i));
+                                                                if(calledLocal.width != usedLine.width) {
+                                                                    SemErr("Original Line "+calledLocal.name+" has a width of "+calledLocal.width+" and usedLine "+usedLine.name+" has a width of "+usedLine.width);
+                                                                    noError = false;
+                                                                }
+                                                            }
+                                                            if(noError) {
+                                                                ArrayList<Statement> statements = finishedModules.get(calledMod.name).getStatements();
+                                                                call = new CallStatement(calledMod, curMod, idents, statements, kind, lineAware);
+                                                            }
+                                                        }
+                                                        .)
                             .
 
     ForStatement<out Statement forStatement>        =                                                                       (.String ident = null;
@@ -330,6 +351,7 @@ PRODUCTIONS
                                                             if(!curMod.isDefined(ident)) {
                                                                 SemErr("Signal "+ident+" is not defined");
                                                             }
+                                                            //TODO error prevention for udnefined signals
                                                             Obj curSignal = curMod.getLocal(ident);
                                                             NumberExpression startWidth = null;
                                                             NumberExpression endWidth = null;

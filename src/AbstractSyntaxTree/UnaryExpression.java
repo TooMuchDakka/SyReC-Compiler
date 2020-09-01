@@ -2,6 +2,7 @@ package AbstractSyntaxTree;
 
 import CodeGen.Code;
 import CodeGen.ExpressionResult;
+import SymTable.Mod;
 
 public class UnaryExpression extends Expression {
 
@@ -59,5 +60,10 @@ public class UnaryExpression extends Expression {
         if (kind == Kind.LOGICAL) {
             return 1;
         } else return expression.getWidth();
+    }
+
+    @Override
+    public UnaryExpression replaceSignals(String before, String after, Mod currentModule) {
+        return new UnaryExpression(expression.replaceSignals(before, after, currentModule), kind);
     }
 }

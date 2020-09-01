@@ -1,6 +1,7 @@
 package AbstractSyntaxTree;
 
 import CodeGen.ExpressionResult;
+import SymTable.Mod;
 
 public class NumberExpression extends Expression {
 
@@ -65,5 +66,18 @@ public class NumberExpression extends Expression {
     @Override
     public int getWidth() {
         return 0; //TODO change this to log2(int)?
+    }
+
+    @Override
+    public NumberExpression replaceSignals(String before, String after, Mod currentModule) {
+        if (kind == Kind.BITWIDTH) {
+            return new NumberExpression(after, kind);
+        } else if (kind == Kind.INT) {
+            return new NumberExpression(num);
+        } else if (kind == Kind.LOOPVAR) {
+            return new NumberExpression(ident, kind); //LoopVars stay the same on calls
+        } else {
+            return new NumberExpression(firstNum.replaceSignals(before, after, currentModule), secondNum.replaceSignals(before, after, currentModule), kind);
+        }
     }
 }

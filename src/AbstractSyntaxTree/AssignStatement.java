@@ -3,6 +3,7 @@ package AbstractSyntaxTree;
 import CodeGen.Code;
 import CodeGen.ExpressionResult;
 import CodeGen.Gate;
+import SymTable.Mod;
 
 import java.util.ArrayList;
 
@@ -48,4 +49,11 @@ public class AssignStatement extends Statement {
         }
         return gates;
     }
+
+    @Override
+    public AssignStatement replaceSignals(String before, String after, Mod currentModule) {
+        return new AssignStatement(signalExp.replaceSignals(before, after, currentModule), expression.replaceSignals(before, after, currentModule), kind, lineAware);
+    }
+
+
 }

@@ -2,8 +2,9 @@ package AbstractSyntaxTree;
 
 import CodeGen.Code;
 import CodeGen.ExpressionResult;
+import SymTable.Mod;
 
-public class BinaryExpression extends Expression{
+public class BinaryExpression extends Expression {
 
     private final Expression firstExpression;
     private final Expression secondExpression;
@@ -50,6 +51,11 @@ public class BinaryExpression extends Expression{
     }
 
     @Override
+    public BinaryExpression replaceSignals(String before, String after, Mod currentModule) {
+        return new BinaryExpression(firstExpression.replaceSignals(before, after, currentModule), secondExpression.replaceSignals(before, after, currentModule), kind);
+    }
+
+    @Override
     public ExpressionResult generate(CodeMod module) {
         ExpressionResult firstRes = firstExpression.generate(module);
         ExpressionResult secondRes = secondExpression.generate(module);
@@ -72,31 +78,25 @@ public class BinaryExpression extends Expression{
                 break;
 
             case LOG_AND:
-                if(firstRes.isNumber && secondRes.isNumber) {
-                    if(firstRes.number == 1 && secondRes.number == 1) {
+                if (firstRes.isNumber && secondRes.isNumber) {
+                    if (firstRes.number == 1 && secondRes.number == 1) {
                         return new ExpressionResult(1);
-                    }
-                    else {
+                    } else {
                         return new ExpressionResult(0);
                     }
-                }
-                else if(firstRes.isNumber) {
-                    if(firstRes.number == 0) {
+                } else if (firstRes.isNumber) {
+                    if (firstRes.number == 0) {
                         return new ExpressionResult(0);
-                    }
-                    else {
+                    } else {
                         return secondRes;
                     }
-                }
-                else if(secondRes.isNumber) {
-                    if(secondRes.number == 0) {
+                } else if (secondRes.isNumber) {
+                    if (secondRes.number == 0) {
                         return new ExpressionResult(0);
-                    }
-                    else {
+                    } else {
                         return firstRes;
                     }
-                }
-                else {
+                } else {
                     SignalExpression andLine = module.getAdditionalLines(1);
                     usedLines.add(andLine.getLineName(0));
                     ExpressionResult res = new ExpressionResult(andLine);
@@ -107,27 +107,22 @@ public class BinaryExpression extends Expression{
                 }
 
             case LOG_OR:
-                if(firstRes.isNumber && secondRes.isNumber) {
-                    int newValue = firstRes.number == 1 || secondRes.number == 1?1:0;
+                if (firstRes.isNumber && secondRes.isNumber) {
+                    int newValue = firstRes.number == 1 || secondRes.number == 1 ? 1 : 0;
                     return new ExpressionResult(newValue);
-                }
-                else if(firstRes.isNumber) {
-                    if(firstRes.number == 1) {
+                } else if (firstRes.isNumber) {
+                    if (firstRes.number == 1) {
                         return new ExpressionResult(1);
-                    }
-                    else {
+                    } else {
                         return secondRes;
                     }
-                }
-                else if(secondRes.isNumber) {
-                    if(secondRes.number == 1) {
+                } else if (secondRes.isNumber) {
+                    if (secondRes.number == 1) {
                         return new ExpressionResult(1);
-                    }
-                    else {
+                    } else {
                         return firstRes;
                     }
-                }
-                else {
+                } else {
                     SignalExpression orLine = module.getAdditionalLines(1);
                     usedLines.add(orLine.getLineName(0));
                     ExpressionResult res = new ExpressionResult(orLine);

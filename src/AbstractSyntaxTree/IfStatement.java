@@ -3,6 +3,7 @@ package AbstractSyntaxTree;
 import CodeGen.Code;
 import CodeGen.ExpressionResult;
 import CodeGen.Gate;
+import SymTable.Mod;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -86,5 +87,20 @@ public class IfStatement extends Statement {
         }
 
         return gates;
+    }
+
+    @Override
+    public IfStatement replaceSignals(String before, String after, Mod currentModule) {
+        Expression newIf = ifExpression.replaceSignals(before, after, currentModule);
+        ArrayList<Statement> newThen = new ArrayList<>();
+        for (Statement statement : thenStatements) {
+            newThen.add(statement.replaceSignals(before, after, currentModule));
+        }
+        ArrayList<Statement> newElse = new ArrayList<>();
+        for (Statement statement : elseStatements) {
+            newElse.add(statement.replaceSignals(before, after, currentModule));
+        }
+        Expression newFi = fiExpression.replaceSignals(before, after, currentModule);
+        return new IfStatement(newIf, newThen, newElse, newFi, lineAware);
     }
 }

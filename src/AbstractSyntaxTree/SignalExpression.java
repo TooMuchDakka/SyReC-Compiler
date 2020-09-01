@@ -1,6 +1,7 @@
 package AbstractSyntaxTree;
 
 import CodeGen.ExpressionResult;
+import SymTable.Mod;
 import SymTable.Obj;
 
 import java.util.ArrayList;
@@ -27,6 +28,16 @@ public class SignalExpression extends Expression {
         originalWidth = obj.width;
         this.startWidth = startWidth;
         this.endWidth = endWidth;
+    }
+
+    private SignalExpression(SignalExpression copyFrom, NumberExpression newStartWidth, NumberExpression newEndWidth) {
+        //constructor to copy same SignalExpression
+        name = copyFrom.name;
+        lines = copyFrom.lines;
+        startWidth = newStartWidth;
+        endWidth = newEndWidth;
+        noBus = copyFrom.noBus;
+        originalWidth = copyFrom.originalWidth;
     }
 
     public SignalExpression(String name, ArrayList<String> lines) {
@@ -72,6 +83,17 @@ public class SignalExpression extends Expression {
     public int getWidth() {
         //TODO change this so it works with loopVars as index
         return lines.size();
+    }
+
+    @Override
+    public SignalExpression replaceSignals(String before, String after, Mod currentModule) {
+        if (originalWidth != -1 && name.equals(before)) {
+            //additionalLines only exist in the generate Step so cant be replaced
+            Obj newObj = currentModule.getLocal(after);
+            return new SignalExpression(newObj, startWidth.replaceSignals(before, after, currentModule), endWidth.replaceSignals(before, after, currentModule));
+        } else {
+            return new SignalExpression(this, startWidth.replaceSignals(before, after, currentModule), endWidth.replaceSignals(before, after, currentModule));
+        }
     }
 
     public String getLineName(int index) {

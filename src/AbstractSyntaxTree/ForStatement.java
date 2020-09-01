@@ -1,6 +1,7 @@
 package AbstractSyntaxTree;
 
 import CodeGen.Gate;
+import SymTable.Mod;
 
 import java.util.ArrayList;
 
@@ -56,5 +57,17 @@ public class ForStatement extends Statement {
             module.releaseLoopVar(ident);
         }
         return gates;
+    }
+
+    @Override
+    public ForStatement replaceSignals(String before, String after, Mod currentModule) {
+        NumberExpression newFrom = from.replaceSignals(before, after, currentModule);
+        NumberExpression newTo = to.replaceSignals(before, after, currentModule);
+        NumberExpression newStep = step.replaceSignals(before, after, currentModule);
+        ArrayList<Statement> newStatements = new ArrayList<>();
+        for (Statement statement : statements) {
+            newStatements.add(statement.replaceSignals(before, after, currentModule));
+        }
+        return new ForStatement(ident, newFrom, newTo, newStep, newStatements, lineAware);
     }
 }

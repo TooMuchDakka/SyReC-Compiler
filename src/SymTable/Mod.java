@@ -1,32 +1,32 @@
 package SymTable;
 
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class Mod {
 
     //the Symtable module
-    public final String name;
+    public String name;
     private int signalCount = 0; //count number of signals (for REAL format)
     private int parameterCount = 0; //count parameters for call
     private HashSet<String> loopVars = new HashSet<>();
 
-    private Map<String, Obj> locals = new HashMap<String, Obj>();
+    private Map<String, Obj> locals = new LinkedHashMap<String, Obj>();
 
     public Mod(String name) {
         this.name = name;
     }
 
-    public boolean addObj (Obj obj) {
-        if(locals.containsKey(obj.name)) {
+    public boolean addObj(Obj obj) {
+        if (locals.containsKey(obj.name)) {
             return false;
         }
-        if(obj.kind == Obj.Kind.In || obj.kind == Obj.Kind.Inout || obj.kind == Obj.Kind.Out) {
+        if (obj.kind == Obj.Kind.In || obj.kind == Obj.Kind.Inout || obj.kind == Obj.Kind.Out) {
             signalCount++;
         }
-        if(obj.kind != Obj.Kind.Wire && obj.kind != Obj.Kind.State) {
+        if (obj.kind == Obj.Kind.Wire || obj.kind == Obj.Kind.State) {
             parameterCount++;
         }
         locals.put(obj.name, obj);
@@ -42,27 +42,41 @@ public class Mod {
         return parameterCount;
     } //return just the parameters
 
+    public int getSignalCount() {
+        return signalCount;
+    }
+
     public int getLineCount() { //return parameters+lines needed for wires (width is used in this calculation
         int count = 0;
-        for (Obj signal: getLines()) {
-            count+=signal.width;
+        for (Obj signal : getLines()) {
+            count += signal.width;
         }
         return count;
-    } 
+    }
 
     public Obj[] getLines() {
         return locals.values().toArray(new Obj[0]); //return an Array of the Objects (Lines/Parameters) of the module
     }
 
     public Obj getLocal(String name) {
-        if(!isDefined(name)) {
+        if (!isDefined(name)) {
             return null;
         }
         return new Obj(locals.get(name));
     }
 
-    public HashMap<String, Obj> getLocals() {
-        return new HashMap<String, Obj>(locals);
+    public LinkedHashMap<String, Obj> getLocals() {
+        return new LinkedHashMap<String, Obj>(locals);
+    }
+
+    public ArrayList<Obj> getSignals() {
+        ArrayList<Obj> signals = new ArrayList<Obj>();
+        for (Obj signal : locals.values()) {
+            if (signal.kind != Obj.Kind.Wire || signal.kind != Obj.Kind.State) {
+                signals.add(signal);
+            }
+        }
+        return signals;
     }
 
     public boolean loopVarDefined(String loopVar) {
@@ -76,7 +90,6 @@ public class Mod {
     public void removeLoopVar(String loopVar) {
         loopVars.remove(loopVar);
     }
-
 
 
 }

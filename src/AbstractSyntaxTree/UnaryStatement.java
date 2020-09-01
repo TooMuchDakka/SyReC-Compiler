@@ -2,6 +2,7 @@ package AbstractSyntaxTree;
 
 import CodeGen.Code;
 import CodeGen.Gate;
+import SymTable.Mod;
 
 import java.util.ArrayList;
 
@@ -34,5 +35,10 @@ public class UnaryStatement extends Statement {
                 return Code.decrement(signalExp);
         }
         return null;
+    }
+
+    @Override
+    public UnaryStatement replaceSignals(String before, String after, Mod currentModule) {
+        return new UnaryStatement(signalExp.replaceSignals(before, after, currentModule), kind, lineAware);
     }
 }

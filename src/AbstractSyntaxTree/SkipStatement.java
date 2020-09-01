@@ -1,6 +1,7 @@
 package AbstractSyntaxTree;
 
 import CodeGen.Gate;
+import SymTable.Mod;
 
 import java.util.ArrayList;
 
@@ -11,6 +12,15 @@ public class SkipStatement extends Statement {
 
     @Override
     public ArrayList<Gate> generate(CodeMod module) {
-        return new ArrayList<Gate>(); //Skip statement returns empty gate list
+        //return new ArrayList<Gate>(); //Skip statement returns empty gate list
+        //TODO remvoe DEBUG
+        ArrayList<Gate> gates = new ArrayList<>();
+        gates.add(new Gate(Gate.Kind.V));
+        return gates;
+    }
+
+    @Override
+    public SkipStatement replaceSignals(String before, String after, Mod currentModule) {
+        return new SkipStatement(lineAware);
     }
 }

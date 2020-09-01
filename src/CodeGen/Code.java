@@ -3,26 +3,31 @@ package CodeGen;
 
 import AbstractSyntaxTree.CodeMod;
 import AbstractSyntaxTree.SignalExpression;
-import AbstractSyntaxTree.Statement;
 import SymTable.Mod;
 import SymTable.Obj;
-import sun.misc.Signal;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.nio.file.*;
-import java.util.*;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.Collections;
 
-import static CodeGen.Gate.Kind.*;
+import static CodeGen.Gate.Kind.Fredkin;
+import static CodeGen.Gate.Kind.Toffoli;
 
 public class Code {
 
-    Path curPath;
-    Map<String, CodeMod> modules; //can be used to unravel calls
-    CodeMod curMod;
 
-    public Code(String folderName) {
-        curPath = Path.of(folderName);
+    public static CodeMod createModule(Mod module) {
+        return new CodeMod(module.name, module.getLocals());
+    }
+
+    public static void endModule(String folderName, Mod module, CodeMod curMod) {
+        //ends the module and writes it to file
+        Path curPath = Path.of(folderName);
         try {
             Files.createDirectory(curPath);
         } catch (FileAlreadyExistsException ee) {
@@ -30,24 +35,14 @@ public class Code {
         } catch (IOException e) {
             System.err.println("Failed to create directory!" + e.getMessage());
         }
-        modules = new HashMap<>();
-    }
-
-    public void createModule(Mod module) {
-        curMod = new CodeMod(module.name, module.getLocals());
-        modules.put(module.name, curMod);
-    }
-
-    public void endModule(Mod module)  {
-        //ends the module and writes it to file
         try { //delete File if it already exists
-            Files.deleteIfExists(Path.of(curPath.toString(), module.name+".real"));
+            Files.deleteIfExists(Path.of(curPath.toString(), module.name + ".real"));
         } catch (IOException e) {
             e.printStackTrace();
         }
         try {
             //create Writer
-            BufferedWriter curWriter = Files.newBufferedWriter(Path.of(curPath.toString(), module.name+".real"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            BufferedWriter curWriter = Files.newBufferedWriter(Path.of(curPath.toString(), module.name + ".real"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             ArrayList<Gate> gates = curMod.generate();
             curWriter.append("# ").append(module.name);
             curWriter.newLine();
@@ -58,10 +53,9 @@ public class Code {
             ArrayList<Obj> lines = curMod.getVariables();
             curWriter.append(".variables ");
             for (Obj line : lines) {
-                if(line.width == 1) {
+                if (line.width == 1) {
                     curWriter.append(line.name).append(" "); //write each variable
-                }
-                else for(int i = 0; i < line.width; i++) {
+                } else for (int i = 0; i < line.width; i++) {
                     curWriter.append(line.name).append("_").append(String.valueOf(i)).append(" "); //write all subvariables of the width
                 }
             }
@@ -69,20 +63,18 @@ public class Code {
             curWriter.newLine();
             curWriter.append(".constants ");
             for (Obj line : lines) {
-                if(line.getConstant()) {
+                if (line.getConstant()) {
                     curWriter.append(String.join("", Collections.nCopies(line.width, "0")));
-                }
-                else {
+                } else {
                     curWriter.append(String.join("", Collections.nCopies(line.width, "-")));
                 }
             }
             curWriter.newLine();
             curWriter.append(".garbage ");
             for (Obj line : lines) {
-                if(line.getGarbage()) {
+                if (line.getGarbage()) {
                     curWriter.append(String.join("", Collections.nCopies(line.width, "1")));
-                }
-                else {
+                } else {
                     curWriter.append(String.join("", Collections.nCopies(line.width, "-")));
                 }
             }
@@ -91,7 +83,7 @@ public class Code {
             curWriter.newLine();
 
             //here the gates start
-            for(Gate gate : gates) {
+            for (Gate gate : gates) {
                 ArrayList<String> controlLines = gate.getControlLines();
                 ArrayList<String> targetLines = gate.getTargetLines();
                 switch (gate.kind) {
@@ -112,11 +104,11 @@ public class Code {
                         curWriter.append("v+");
                         break;
                 }
-                curWriter.append(String.valueOf(controlLines.size()+targetLines.size()));
-                for(String line : controlLines) {
+                curWriter.append(String.valueOf(controlLines.size() + targetLines.size()));
+                for (String line : controlLines) {
                     curWriter.append(" ").append(line);
                 }
-                for(String line : targetLines) {
+                for (String line : targetLines) {
                     curWriter.append(" ").append(line);
                 }
                 curWriter.newLine();
@@ -132,7 +124,7 @@ public class Code {
     //function is only called if the width is equal
     public static ArrayList<Gate> swap(SignalExpression firstSig, SignalExpression secondSig) {
         ArrayList<Gate> gates = new ArrayList<>();
-        for(int i = 0; i < firstSig.getWidth(); i++) {
+        for (int i = 0; i < firstSig.getWidth(); i++) {
             Gate tempGate = new Gate(Fredkin);
             tempGate.addTargetLine(firstSig.getLineName(i));
             tempGate.addTargetLine(secondSig.getLineName(i));
@@ -144,7 +136,7 @@ public class Code {
     //negate given Signal
     public static ArrayList<Gate> not(SignalExpression sig) {
         ArrayList<Gate> gates = new ArrayList<>();
-        for(int i = 0; i < sig.getWidth(); i++) {
+        for (int i = 0; i < sig.getWidth(); i++) {
             Gate tempGate = new Gate(Toffoli);
             tempGate.addTargetLine(sig.getLineName(i));
             gates.add(tempGate);
@@ -156,9 +148,9 @@ public class Code {
     //++= Statement
     public static ArrayList<Gate> increment(SignalExpression sig) {
         ArrayList<Gate> gates = new ArrayList<>();
-        for(int i = sig.getWidth()-1; i >= 0; i--) {
+        for (int i = sig.getWidth() - 1; i >= 0; i--) {
             ArrayList<String> controlLines = new ArrayList<>();
-            for(int j = 0; j < i; j++) {
+            for (int j = 0; j < i; j++) {
                 controlLines.add(sig.getLineName(j));
             }
             Gate tempGate = new Gate(Toffoli);
@@ -178,9 +170,9 @@ public class Code {
 
     public static ArrayList<Gate> leftShift(ExpressionResult exp, int number, SignalExpression additionalLines) {
         ArrayList<Gate> gates = new ArrayList<>();
-        for(int i = 0; i < exp.getWidth()-number; i++) {
+        for (int i = 0; i < exp.getWidth() - number; i++) {
             Gate tempGate = new Gate(Toffoli);
-            tempGate.addTargetLine(additionalLines.getLineName(i+number));
+            tempGate.addTargetLine(additionalLines.getLineName(i + number));
             tempGate.addControlLine(exp.getLineName(i));
             gates.add(tempGate);
         }
@@ -189,10 +181,10 @@ public class Code {
 
     public static ArrayList<Gate> rightShift(ExpressionResult exp, int number, SignalExpression additionalLines) {
         ArrayList<Gate> gates = new ArrayList<>();
-        for(int i = 0; i < exp.getWidth()-number; i++) {
+        for (int i = 0; i < exp.getWidth() - number; i++) {
             Gate tempGate = new Gate(Toffoli);
             tempGate.addTargetLine(additionalLines.getLineName(i));
-            tempGate.addControlLine(exp.getLineName(i+number));
+            tempGate.addControlLine(exp.getLineName(i + number));
             gates.add(tempGate);
         }
         return gates;
@@ -200,7 +192,7 @@ public class Code {
 
     public static ArrayList<Gate> notExp(ExpressionResult exp, SignalExpression additionalLines) {
         ArrayList<Gate> gates = new ArrayList<>();
-        for(int i = 0; i < exp.getWidth(); i++) {
+        for (int i = 0; i < exp.getWidth(); i++) {
             Gate tempGate = new Gate(Toffoli);
             tempGate.addTargetLine(additionalLines.getLineName(i));
             tempGate.addControlLine(exp.getLineName(i));
@@ -214,19 +206,18 @@ public class Code {
 
     public static ArrayList<Gate> xorAssign(SignalExpression firstSignal, ExpressionResult exp) {
         ArrayList<Gate> gates = new ArrayList<>();
-        if(exp.isNumber) {
+        if (exp.isNumber) {
             int number = exp.number;
-            for(int i = 0; (i < Math.ceil(Math.log(exp.number)/Math.log(2)) && i < firstSignal.getWidth()); i++) {
-                if(number%2 == 1) {
+            for (int i = 0; (i < Math.ceil(Math.log(exp.number) / Math.log(2)) && i < firstSignal.getWidth()); i++) {
+                if (number % 2 == 1) {
                     Gate newGate = new Gate(Toffoli);
                     newGate.addTargetLine(firstSignal.getLineName(i));
                     gates.add(newGate);
                 }
-            number /= 2;
+                number /= 2;
             }
-        }
-        else {
-            for(int i = 0; i < firstSignal.getWidth(); i++) {
+        } else {
+            for (int i = 0; i < firstSignal.getWidth(); i++) {
                 Gate newGate = new Gate(Toffoli);
                 newGate.addTargetLine(firstSignal.getLineName(i));
                 newGate.addControlLine(exp.getLineName(i));
@@ -284,7 +275,7 @@ public class Code {
 
     public static ArrayList<Gate> reverseGates(ArrayList<Gate> gates) {
         ArrayList<Gate> reverse = new ArrayList<>();
-        for(Gate gate : gates) {
+        for (Gate gate : gates) {
             Gate tempGate = new Gate(gate.kind);
             tempGate.addTargetLines(gate.getTargetLines());
             tempGate.addControlLines(gate.getControlLines());
@@ -294,7 +285,4 @@ public class Code {
         return reverse;
     }
 
-    public void addStatements(ArrayList<Statement> statements) {
-        curMod.addStatements(statements);
-    }
 }

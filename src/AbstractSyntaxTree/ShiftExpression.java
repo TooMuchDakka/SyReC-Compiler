@@ -2,6 +2,7 @@ package AbstractSyntaxTree;
 
 import CodeGen.Code;
 import CodeGen.ExpressionResult;
+import SymTable.Mod;
 
 public class ShiftExpression extends Expression {
 
@@ -28,10 +29,9 @@ public class ShiftExpression extends Expression {
         int numberRes = number.generate(module).number;
         switch (kind) {
             case LEFT:
-                if(res.isNumber) {
+                if (res.isNumber) {
                     return new ExpressionResult(res.number << numberRes);
-                }
-                else {
+                } else {
                     SignalExpression shiftLine = module.getAdditionalLines(expression.getWidth());
                     usedLines.addAll(shiftLine.getLines());
                     ExpressionResult shiftRes = new ExpressionResult(shiftLine);
@@ -40,10 +40,9 @@ public class ShiftExpression extends Expression {
                     return shiftRes;
                 }
             case RIGHT:
-                if(res.isNumber) {
+                if (res.isNumber) {
                     return new ExpressionResult(res.number >> numberRes);
-                }
-                else {
+                } else {
                     SignalExpression shiftLine = module.getAdditionalLines(expression.getWidth());
                     usedLines.addAll(shiftLine.getLines());
                     ExpressionResult shiftRes = new ExpressionResult(shiftLine);
@@ -58,5 +57,10 @@ public class ShiftExpression extends Expression {
     @Override
     public int getWidth() {
         return expression.getWidth();
+    }
+
+    @Override
+    public ShiftExpression replaceSignals(String before, String after, Mod currentModule) {
+        return new ShiftExpression(expression.replaceSignals(before, after, currentModule), number.replaceSignals(before, after, currentModule), kind);
     }
 }

@@ -30,3 +30,7 @@ module testmodule3 (in a(3), in b(3), out c)
 		a.$loopVar <=> b.$loopVar;
 		~=c
 	rof
+	
+module testmodule4 (in d(3), in e(3), out f)
+	uncall testmodule3(d,e,f)
+	

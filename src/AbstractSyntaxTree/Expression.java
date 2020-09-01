@@ -1,6 +1,7 @@
 package AbstractSyntaxTree;
 
 import CodeGen.ExpressionResult;
+import SymTable.Mod;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -20,7 +21,7 @@ public abstract class Expression {
     public abstract int getWidth();
 
     public void resetLines(CodeMod module) {
-        for(String lineName : usedLines) {
+        for (String lineName : usedLines) {
             module.resetLine(lineName);
         }
     }
@@ -28,4 +29,6 @@ public abstract class Expression {
     public boolean containsSignal(String signalName) {
         return containedSignals.contains(signalName);
     }
+
+    public abstract Expression replaceSignals(String before, String after, Mod currentModule);
 }
