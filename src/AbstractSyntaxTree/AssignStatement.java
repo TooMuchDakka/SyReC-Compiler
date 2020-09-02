@@ -6,6 +6,7 @@ import CodeGen.Gate;
 import SymTable.Mod;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class AssignStatement extends Statement {
 
@@ -51,8 +52,8 @@ public class AssignStatement extends Statement {
     }
 
     @Override
-    public AssignStatement replaceSignals(String before, String after, Mod currentModule) {
-        return new AssignStatement(signalExp.replaceSignals(before, after, currentModule), expression.replaceSignals(before, after, currentModule), kind, lineAware);
+    public AssignStatement replaceSignals(HashMap<String, String> replace, Mod currentModule) {
+        return new AssignStatement(signalExp.replaceSignals(replace, currentModule), expression.replaceSignals(replace, currentModule), kind, lineAware);
     }
 
 

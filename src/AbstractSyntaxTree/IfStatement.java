@@ -7,6 +7,7 @@ import SymTable.Mod;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 
 public class IfStatement extends Statement {
 
@@ -90,17 +91,17 @@ public class IfStatement extends Statement {
     }
 
     @Override
-    public IfStatement replaceSignals(String before, String after, Mod currentModule) {
-        Expression newIf = ifExpression.replaceSignals(before, after, currentModule);
+    public IfStatement replaceSignals(HashMap<String, String> replace, Mod currentModule) {
+        Expression newIf = ifExpression.replaceSignals(replace, currentModule);
         ArrayList<Statement> newThen = new ArrayList<>();
         for (Statement statement : thenStatements) {
-            newThen.add(statement.replaceSignals(before, after, currentModule));
+            newThen.add(statement.replaceSignals(replace, currentModule));
         }
         ArrayList<Statement> newElse = new ArrayList<>();
         for (Statement statement : elseStatements) {
-            newElse.add(statement.replaceSignals(before, after, currentModule));
+            newElse.add(statement.replaceSignals(replace, currentModule));
         }
-        Expression newFi = fiExpression.replaceSignals(before, after, currentModule);
+        Expression newFi = fiExpression.replaceSignals(replace, currentModule);
         return new IfStatement(newIf, newThen, newElse, newFi, lineAware);
     }
 }

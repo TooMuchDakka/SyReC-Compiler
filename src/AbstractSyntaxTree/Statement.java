@@ -5,6 +5,7 @@ import CodeGen.Gate;
 import SymTable.Mod;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public abstract class Statement {
     boolean lineAware;
@@ -16,5 +17,5 @@ public abstract class Statement {
 
     public abstract ArrayList<Gate> generate(CodeMod module);
 
-    public abstract Statement replaceSignals(String before, String after, Mod currentModule);
+    public abstract Statement replaceSignals(HashMap<String, String> replace, Mod currentModule);
 }

@@ -4,6 +4,8 @@ import CodeGen.Code;
 import CodeGen.ExpressionResult;
 import SymTable.Mod;
 
+import java.util.HashMap;
+
 public class BinaryExpression extends Expression {
 
     private final Expression firstExpression;
@@ -51,8 +53,8 @@ public class BinaryExpression extends Expression {
     }
 
     @Override
-    public BinaryExpression replaceSignals(String before, String after, Mod currentModule) {
-        return new BinaryExpression(firstExpression.replaceSignals(before, after, currentModule), secondExpression.replaceSignals(before, after, currentModule), kind);
+    public BinaryExpression replaceSignals(HashMap<String, String> replace, Mod currentModule) {
+        return new BinaryExpression(firstExpression.replaceSignals(replace, currentModule), secondExpression.replaceSignals(replace, currentModule), kind);
     }
 
     @Override

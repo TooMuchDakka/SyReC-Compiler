@@ -4,6 +4,8 @@ import CodeGen.Code;
 import CodeGen.ExpressionResult;
 import SymTable.Mod;
 
+import java.util.HashMap;
+
 public class ShiftExpression extends Expression {
 
     private final Expression expression;
@@ -60,7 +62,7 @@ public class ShiftExpression extends Expression {
     }
 
     @Override
-    public ShiftExpression replaceSignals(String before, String after, Mod currentModule) {
-        return new ShiftExpression(expression.replaceSignals(before, after, currentModule), number.replaceSignals(before, after, currentModule), kind);
+    public ShiftExpression replaceSignals(HashMap<String, String> replace, Mod currentModule) {
+        return new ShiftExpression(expression.replaceSignals(replace, currentModule), number.replaceSignals(replace, currentModule), kind);
     }
 }

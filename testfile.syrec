@@ -26,11 +26,14 @@ module testmodule2 (inout a, in b, out c, out d)
 	fi (c||d)
 	
 module testmodule3 (in a(3), in b(3), out c)
+	wire testwire
+	++=testwire;
 	for $loopVar = 0 to 2
 		a.$loopVar <=> b.$loopVar;
 		~=c
 	rof
 	
 module testmodule4 (in d(3), in e(3), out f)
-	uncall testmodule3(d,e,f)
+	call testmodule3(d,e,f);
+	call testmodule3(d,e,f)
 	

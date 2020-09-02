@@ -5,6 +5,7 @@ import CodeGen.Gate;
 import SymTable.Mod;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class SwapStatement extends Statement {
 
@@ -25,7 +26,7 @@ public class SwapStatement extends Statement {
     }
 
     @Override
-    public SwapStatement replaceSignals(String before, String after, Mod currentModule) {
-        return new SwapStatement(firstSignal.replaceSignals(before, after, currentModule), secondSignal.replaceSignals(before, after, currentModule), lineAware);
+    public SwapStatement replaceSignals(HashMap<String, String> replace, Mod currentModule) {
+        return new SwapStatement(firstSignal.replaceSignals(replace, currentModule), secondSignal.replaceSignals(replace, currentModule), lineAware);
     }
 }

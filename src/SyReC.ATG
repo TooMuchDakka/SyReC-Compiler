@@ -258,7 +258,7 @@ PRODUCTIONS
                                                             }
                                                             if(noError) {
                                                                 ArrayList<Statement> statements = finishedModules.get(calledMod.name).getStatements();
-                                                                call = new CallStatement(calledMod, curMod, idents, statements, kind, lineAware);
+                                                                call = new CallStatement(calledMod,finishedModules.get(curMod.name), curMod, idents, statements, kind, lineAware);
                                                             }
                                                         }
                                                         .)

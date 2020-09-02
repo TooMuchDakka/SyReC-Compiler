@@ -3,6 +3,8 @@ package AbstractSyntaxTree;
 import CodeGen.ExpressionResult;
 import SymTable.Mod;
 
+import java.util.HashMap;
+
 public class NumberExpression extends Expression {
 
     public enum Kind {
@@ -69,7 +71,11 @@ public class NumberExpression extends Expression {
     }
 
     @Override
-    public NumberExpression replaceSignals(String before, String after, Mod currentModule) {
+    public NumberExpression replaceSignals(HashMap<String, String> replace, Mod currentModule) {
+        String after = replace.get(ident);
+        if (after == null) {
+            after = ident;
+        }
         if (kind == Kind.BITWIDTH) {
             return new NumberExpression(after, kind);
         } else if (kind == Kind.INT) {
@@ -77,7 +83,7 @@ public class NumberExpression extends Expression {
         } else if (kind == Kind.LOOPVAR) {
             return new NumberExpression(ident, kind); //LoopVars stay the same on calls
         } else {
-            return new NumberExpression(firstNum.replaceSignals(before, after, currentModule), secondNum.replaceSignals(before, after, currentModule), kind);
+            return new NumberExpression(firstNum.replaceSignals(replace, currentModule), secondNum.replaceSignals(replace, currentModule), kind);
         }
     }
 }

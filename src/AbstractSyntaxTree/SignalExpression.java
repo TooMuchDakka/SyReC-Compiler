@@ -5,6 +5,7 @@ import SymTable.Mod;
 import SymTable.Obj;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class SignalExpression extends Expression {
 
@@ -86,13 +87,14 @@ public class SignalExpression extends Expression {
     }
 
     @Override
-    public SignalExpression replaceSignals(String before, String after, Mod currentModule) {
-        if (originalWidth != -1 && name.equals(before)) {
+    public SignalExpression replaceSignals(HashMap<String, String> replace, Mod currentModule) {
+        String after = replace.get(name);
+        if (originalWidth != -1 && after != null) {
             //additionalLines only exist in the generate Step so cant be replaced
             Obj newObj = currentModule.getLocal(after);
-            return new SignalExpression(newObj, startWidth.replaceSignals(before, after, currentModule), endWidth.replaceSignals(before, after, currentModule));
+            return new SignalExpression(newObj, startWidth.replaceSignals(replace, currentModule), endWidth.replaceSignals(replace, currentModule));
         } else {
-            return new SignalExpression(this, startWidth.replaceSignals(before, after, currentModule), endWidth.replaceSignals(before, after, currentModule));
+            return new SignalExpression(this, startWidth.replaceSignals(replace, currentModule), endWidth.replaceSignals(replace, currentModule));
         }
     }
 

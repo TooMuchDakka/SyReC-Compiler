@@ -4,6 +4,7 @@ import CodeGen.ExpressionResult;
 import SymTable.Mod;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 
 public abstract class Expression {
@@ -30,5 +31,5 @@ public abstract class Expression {
         return containedSignals.contains(signalName);
     }
 
-    public abstract Expression replaceSignals(String before, String after, Mod currentModule);
+    public abstract Expression replaceSignals(HashMap<String, String> replace, Mod currentModule);
 }

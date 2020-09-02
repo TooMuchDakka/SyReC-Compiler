@@ -456,7 +456,7 @@ public class Parser {
 		 }
 		 if(noError) {
 		     ArrayList<Statement> statements = finishedModules.get(calledMod.name).getStatements();
-		     call = new CallStatement(calledMod, curMod, idents, statements, kind, lineAware);
+		     call = new CallStatement(calledMod,finishedModules.get(curMod.name), curMod, idents, statements, kind, lineAware);
 		 }
 		}
 		
@@ -555,6 +555,7 @@ public class Parser {
 		if(!curMod.isDefined(ident)) {
 		 SemErr("Signal "+ident+" is not defined");
 		}
+		//TODO error prevention for udnefined signals
 		Obj curSignal = curMod.getLocal(ident);
 		NumberExpression startWidth = null;
 		NumberExpression endWidth = null;

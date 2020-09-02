@@ -4,6 +4,8 @@ import CodeGen.Code;
 import CodeGen.ExpressionResult;
 import SymTable.Mod;
 
+import java.util.HashMap;
+
 public class UnaryExpression extends Expression {
 
     private final Expression expression;
@@ -63,7 +65,7 @@ public class UnaryExpression extends Expression {
     }
 
     @Override
-    public UnaryExpression replaceSignals(String before, String after, Mod currentModule) {
-        return new UnaryExpression(expression.replaceSignals(before, after, currentModule), kind);
+    public UnaryExpression replaceSignals(HashMap<String, String> replace, Mod currentModule) {
+        return new UnaryExpression(expression.replaceSignals(replace, currentModule), kind);
     }
 }

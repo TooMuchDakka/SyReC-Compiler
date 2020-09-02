@@ -31,15 +31,14 @@ public class CodeMod {
         ArrayList<String> lines = new ArrayList<>();
         Obj temp;
         for (int i = 0; i < width; i++) {
-            if(zeroLines.size() > 0) {
-                temp = zeroLines.get(zeroLines.size()-1);
+            if (zeroLines.size() > 0) {
+                temp = zeroLines.get(zeroLines.size() - 1);
                 temp.setGarbage(true);
                 additionalLines.put(temp.name, temp);
                 lines.add(temp.name);
-                zeroLines.remove(zeroLines.size()-1);
-            }
-            else {
-                temp = new Obj(Obj.Kind.Wire, "addLine"+addLineCounter, 1);
+                zeroLines.remove(zeroLines.size() - 1);
+            } else {
+                temp = new Obj(Obj.Kind.Wire, "addLine" + addLineCounter, 1);
                 additionalLines.put(temp.name, temp);
                 lines.add(temp.name);
                 addLineCounter++;
@@ -49,7 +48,7 @@ public class CodeMod {
     }
 
     public void resetLine(String lineName) {
-        if(additionalLines.containsKey(lineName)) {
+        if (additionalLines.containsKey(lineName)) {
             Obj line = additionalLines.remove(lineName);
             //when we reset a line we know its no longer garbage
             line.setGarbage(false);
@@ -66,10 +65,9 @@ public class CodeMod {
     }
 
 
-
     public ArrayList<Gate> generate() {
         ArrayList<Gate> gates = new ArrayList<>();
-        for(Statement statement : statements) {
+        for (Statement statement : statements) {
             gates.addAll(statement.generate(this));
         }
         return gates;
@@ -86,8 +84,8 @@ public class CodeMod {
 
     public int getVarCount() { //return parameters+lines needed for wires (width is used in this calculation
         int count = 0;
-        for (Obj signal: getVariables()) {
-            count+=signal.width;
+        for (Obj signal : getVariables()) {
+            count += signal.width;
         }
         return count;
     }
@@ -108,7 +106,9 @@ public class CodeMod {
         loopVars.remove(ident);
     }
 
-
+    public void addVariable(Obj variable) {
+        variables.put(variable.name, variable);
+    }
 
 
 }

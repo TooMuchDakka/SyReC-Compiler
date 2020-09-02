@@ -72,7 +72,7 @@ public class Mod {
     public ArrayList<Obj> getSignals() {
         ArrayList<Obj> signals = new ArrayList<Obj>();
         for (Obj signal : locals.values()) {
-            if (signal.kind != Obj.Kind.Wire || signal.kind != Obj.Kind.State) {
+            if (signal.kind != Obj.Kind.Wire && signal.kind != Obj.Kind.State) {
                 signals.add(signal);
             }
         }

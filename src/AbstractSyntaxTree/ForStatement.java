@@ -4,6 +4,7 @@ import CodeGen.Gate;
 import SymTable.Mod;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class ForStatement extends Statement {
 
@@ -60,13 +61,13 @@ public class ForStatement extends Statement {
     }
 
     @Override
-    public ForStatement replaceSignals(String before, String after, Mod currentModule) {
-        NumberExpression newFrom = from.replaceSignals(before, after, currentModule);
-        NumberExpression newTo = to.replaceSignals(before, after, currentModule);
-        NumberExpression newStep = step.replaceSignals(before, after, currentModule);
+    public ForStatement replaceSignals(HashMap<String, String> replace, Mod currentModule) {
+        NumberExpression newFrom = from.replaceSignals(replace, currentModule);
+        NumberExpression newTo = to.replaceSignals(replace, currentModule);
+        NumberExpression newStep = step.replaceSignals(replace, currentModule);
         ArrayList<Statement> newStatements = new ArrayList<>();
         for (Statement statement : statements) {
-            newStatements.add(statement.replaceSignals(before, after, currentModule));
+            newStatements.add(statement.replaceSignals(replace, currentModule));
         }
         return new ForStatement(ident, newFrom, newTo, newStep, newStatements, lineAware);
     }

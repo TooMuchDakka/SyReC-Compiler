@@ -4,6 +4,7 @@ import CodeGen.Gate;
 import SymTable.Mod;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class SkipStatement extends Statement {
     public SkipStatement(boolean lineAware) {
@@ -20,7 +21,7 @@ public class SkipStatement extends Statement {
     }
 
     @Override
-    public SkipStatement replaceSignals(String before, String after, Mod currentModule) {
+    public SkipStatement replaceSignals(HashMap<String, String> replace, Mod currentModule) {
         return new SkipStatement(lineAware);
     }
 }

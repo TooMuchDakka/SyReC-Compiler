@@ -5,6 +5,7 @@ import CodeGen.Gate;
 import SymTable.Mod;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class UnaryStatement extends Statement {
 
@@ -38,7 +39,7 @@ public class UnaryStatement extends Statement {
     }
 
     @Override
-    public UnaryStatement replaceSignals(String before, String after, Mod currentModule) {
-        return new UnaryStatement(signalExp.replaceSignals(before, after, currentModule), kind, lineAware);
+    public UnaryStatement replaceSignals(HashMap<String, String> replace, Mod currentModule) {
+        return new UnaryStatement(signalExp.replaceSignals(replace, currentModule), kind, lineAware);
     }
 }
