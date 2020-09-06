@@ -63,6 +63,7 @@ public class BinaryExpression extends Expression {
         ExpressionResult secondRes = secondExpression.generate(module);
         usedLines.addAll(firstExpression.usedLines);
         usedLines.addAll(secondExpression.usedLines);
+        //TODO add missing BinaryExpressions
         switch (kind) {
             case PLUS:
                 break;

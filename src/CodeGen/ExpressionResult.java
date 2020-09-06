@@ -3,7 +3,6 @@ package CodeGen;
 import AbstractSyntaxTree.SignalExpression;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 
 public class ExpressionResult {
     //a Expression can either return a number or a Signal
@@ -14,7 +13,6 @@ public class ExpressionResult {
     public final SignalExpression signal; //lines of this
     public final int number;
     public final ArrayList<Gate> gates;
-
 
 
     public ExpressionResult(SignalExpression signal) {
@@ -37,7 +35,6 @@ public class ExpressionResult {
         this.number = number;
         gates = new ArrayList<>();
     }
-
 
 
     public int getWidth() {

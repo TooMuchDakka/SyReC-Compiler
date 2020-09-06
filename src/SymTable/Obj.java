@@ -1,7 +1,5 @@
 package SymTable;
 
-import java.util.Collections;
-
 public class Obj {
     public enum Kind {
         In, Out, Inout, Wire, State
@@ -42,11 +40,11 @@ public class Obj {
         garbage = isGarbage;
     }
 
-    public boolean getGarbage(){
+    public boolean getGarbage() {
         return garbage;
     }
 
-    public boolean getConstant(){
+    public boolean getConstant() {
         return constant;
     }
 }
