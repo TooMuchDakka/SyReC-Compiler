@@ -273,6 +273,106 @@ public class Code {
         return gates;
     }
 
+    public static ArrayList<Gate> plus(ExpressionResult firstExp, ExpressionResult secondExp, SignalExpression additionalLines) {
+        ArrayList<Gate> gates = new ArrayList<>();
+        if (firstExp.isNumber || secondExp.isNumber) {
+            //both cant be a number because else the result would be handled by the AST
+            int number = secondExp.number;
+            if (firstExp.isNumber) {
+                //write secondExp into the first so we only have to handle the case where firstExp is the arbitrary Expression
+                number = firstExp.number;
+                firstExp = secondExp;
+            }
+            if (number == 0) {
+                //neutral operation, empty gate list
+                return gates;
+            }
+            if (number < 0) {
+                //if we add a negative number we can just use minus
+                return minus(firstExp, secondExp, additionalLines);
+            }
+            //we now have firstExp as arbitrary Expression and a positive integer number
+            ArrayList<Boolean> numBool = intToBool(number);
+            for (int i = 0; i < firstExp.getWidth() || i < numBool.size(); i++) {
+                Gate tempGate;
+                if (i < firstExp.getWidth()) {
+                    //yn = xn
+                    tempGate = new Gate(Toffoli);
+                    tempGate.addTargetLine(additionalLines.getLineName(i));
+                    tempGate.addControlLine(firstExp.getLineName(i));
+                    gates.add(tempGate);
+                }
+                if (i < numBool.size() && numBool.get(i)) {
+                    //toggle yn when number on this digit is set
+                    tempGate = new Gate(Toffoli);
+                    tempGate.addTargetLine(additionalLines.getLineName(i));
+                    gates.add(tempGate);
+                }
+                if (i > 0 && i <= firstExp.getWidth() && i <= numBool.size()) {
+                    //if both previous digits are set toggle yn again (carry)
+                    tempGate = new Gate(Toffoli);
+                    tempGate.addTargetLine(additionalLines.getLineName(i));
+                    tempGate.addControlLine(firstExp.getLineName(i - 1));
+                    if (numBool.get(i - 1)) {
+                        gates.add(tempGate);
+                    }
+                }
+            }
+        } else {
+            //general case, both are lines
+            for (int i = 0; i < firstExp.getWidth() || i < secondExp.getWidth(); i++) {
+                Gate tempGate;
+                if (i < firstExp.getWidth()) {
+                    //yn = x1n
+                    tempGate = new Gate(Toffoli);
+                    tempGate.addTargetLine(additionalLines.getLineName(i));
+                    tempGate.addControlLine(firstExp.getLineName(i));
+                    gates.add(tempGate);
+                }
+                Gate reverseGate = null;
+                if (i > 0 && i <= firstExp.getWidth() && i <= secondExp.getWidth()) {
+                    //toggle secondExp Line if both previous digits were set
+                    //also prepare reverseGate for later
+                    tempGate = new Gate(Toffoli);
+                    tempGate.addTargetLine(secondExp.getLineName(i));
+                    tempGate.addControlLine(firstExp.getLineName(i - 1));
+                    tempGate.addControlLine(secondExp.getLineName(i - 1));
+
+                    reverseGate = new Gate(Toffoli);
+                    reverseGate.addTargetLine(secondExp.getLineName(i));
+                    reverseGate.addControlLine(firstExp.getLineName(i - 1));
+                    reverseGate.addControlLine(secondExp.getLineName(i - 1));
+                    gates.add(tempGate);
+                }
+
+                if (i < secondExp.getWidth()) {
+                    //toggle yn with x2n
+                    tempGate = new Gate(Toffoli);
+                    tempGate.addTargetLine(additionalLines.getLineName(i));
+                    tempGate.addControlLine(secondExp.getLineName(i));
+                    gates.add(tempGate);
+                }
+                if (reverseGate != null) {
+                    gates.add(reverseGate);
+                }
+            }
+        }
+
+        return gates;
+    }
+
+    public static ArrayList<Gate> minus(ExpressionResult firstExp, ExpressionResult secondExp, SignalExpression additionalLines) {
+        return null;
+    }
+
+    private static ArrayList<Boolean> intToBool(int num) {
+        ArrayList<Boolean> booleans = new ArrayList<>();
+        for (int i = num; i > 0; i /= 2) {
+            booleans.add(i % 2 == 1);
+        }
+        return booleans;
+    }
+
     public static ArrayList<Gate> reverseGates(ArrayList<Gate> gates) {
         ArrayList<Gate> reverse = new ArrayList<>();
         for (Gate gate : gates) {

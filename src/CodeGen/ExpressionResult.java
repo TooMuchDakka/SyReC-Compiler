@@ -38,7 +38,11 @@ public class ExpressionResult {
 
 
     public int getWidth() {
-        return signal.getWidth();
+        if (!isNumber) {
+            return signal.getWidth();
+        } else {
+            return (int) Math.ceil(Math.log(number) / Math.log(2));
+        }
     }
 
 

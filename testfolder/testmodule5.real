@@ -1,0 +1,21 @@
+# testmodule5
+.version 2.0
+.numvars 12
+.variables h_0 h_1 h_2 i_0 i_1 i_2 g_0 g_1 g_2 addLine0 addLine1 addLine2 
+.constants ---000---000
+.garbage 111---111---
+.begin
+t2 g_0 addLine0
+t1 addLine0
+t2 g_1 addLine1
+t2 g_0 addLine1
+t1 addLine2
+t2 addLine0 i_0
+t2 addLine1 i_1
+t2 addLine2 i_2
+t1 addLine2
+t2 g_0 addLine1
+t2 g_1 addLine1
+t1 addLine0
+t2 g_0 addLine0
+.end

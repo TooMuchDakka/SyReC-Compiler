@@ -1,0 +1,22 @@
+# testmodule4
+.version 2.0
+.numvars 9
+.variables testmodule3_1_testwire d_0 d_1 d_2 testmodule3_0_testwire e_0 e_1 e_2 f 
+.constants 0---0---0
+.garbage 11111111-
+.begin
+t1 testmodule3_0_testwire
+f2 d_0 e_0
+t1 f
+f2 d_1 e_1
+t1 f
+f2 d_2 e_2
+t1 f
+t1 testmodule3_1_testwire
+f2 d_0 e_0
+t1 f
+f2 d_1 e_1
+t1 f
+f2 d_2 e_2
+t1 f
+.end

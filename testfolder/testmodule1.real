@@ -1,0 +1,40 @@
+# testmodule1
+.version 2.0
+.numvars 13
+.variables a_0 a_1 a_2 b_0 b_1 b_2 c d e f addLine2 addLine1 addLine0 
+.constants ------0000000
+.garbage 111111-111---
+.begin
+f2 a_0 b_0
+f2 a_1 b_1
+f2 a_2 b_2
+f2 c d
+f2 a_1 b_2
+f2 f c
+f2 a_2 b_1
+f2 a_1 b_2
+f2 f b_1
+t3 a_0 a_1 a_2
+t2 a_0 a_1
+t1 a_0
+t1 b_0
+t2 b_0 b_1
+t3 b_0 b_1 b_2
+t1 a_0
+t1 a_1
+t1 a_2
+t2 b_0 addLine1
+t2 b_1 addLine2
+t2 addLine0 a_0
+t2 addLine1 a_1
+t2 addLine2 a_2
+t2 b_1 addLine2
+t2 b_0 addLine1
+t2 a_1 addLine2
+t2 a_2 addLine1
+t2 addLine2 b_0
+t2 addLine1 b_1
+t2 addLine0 b_2
+t2 a_2 addLine1
+t2 a_1 addLine2
+.end

@@ -66,7 +66,17 @@ public class BinaryExpression extends Expression {
         //TODO add missing BinaryExpressions
         switch (kind) {
             case PLUS:
-                break;
+                if (firstRes.isNumber && secondRes.isNumber) {
+                    return new ExpressionResult(firstRes.number + secondRes.number);
+                } else {
+                    SignalExpression plusLines = module.getAdditionalLines(Math.max(firstRes.getWidth(), secondRes.getWidth()));
+                    usedLines.addAll(plusLines.getLines());
+                    ExpressionResult res = new ExpressionResult(plusLines);
+                    res.gates.addAll(firstRes.gates);
+                    res.gates.addAll(secondRes.gates);
+                    res.gates.addAll(Code.plus(firstRes, secondRes, plusLines));
+                    return res;
+                }
             case MINUS:
                 break;
             case BIT_XOR:
