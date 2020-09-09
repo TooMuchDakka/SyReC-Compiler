@@ -78,7 +78,17 @@ public class BinaryExpression extends Expression {
                     return res;
                 }
             case MINUS:
-                break;
+                if (firstRes.isNumber && secondRes.isNumber) {
+                    return new ExpressionResult(firstRes.number - secondRes.number);
+                } else {
+                    SignalExpression minusLines = module.getAdditionalLines(Math.max(firstRes.getWidth(), secondRes.getWidth()));
+                    usedLines.addAll(minusLines.getLines());
+                    ExpressionResult res = new ExpressionResult(minusLines);
+                    res.gates.addAll(firstRes.gates);
+                    res.gates.addAll(secondRes.gates);
+                    res.gates.addAll(Code.minus(firstRes, secondRes, minusLines));
+                    return res;
+                }
             case BIT_XOR:
                 break;
             case TIMES_UPPER:
@@ -146,7 +156,17 @@ public class BinaryExpression extends Expression {
                 }
 
             case BIT_AND:
-                break;
+                if (firstRes.isNumber && secondRes.isNumber) {
+                    return new ExpressionResult(firstRes.number & secondRes.number);
+                } else {
+                    SignalExpression bitAndLines = module.getAdditionalLines(Math.max(firstRes.getWidth(), secondRes.getWidth()));
+                    usedLines.addAll(bitAndLines.getLines());
+                    ExpressionResult res = new ExpressionResult(bitAndLines);
+                    res.gates.addAll(firstRes.gates);
+                    res.gates.addAll(secondRes.gates);
+                    res.gates.addAll(Code.bitwiseAnd(firstRes, secondRes, bitAndLines));
+                    return res;
+                }
             case BIT_OR:
                 break;
             case LESSER:
