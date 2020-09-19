@@ -294,8 +294,8 @@ public class Code {
                 //if we add a negative number we can just use minus
                 return minus(firstExp, secondExp, additionalLines);
             }
-            //we now have firstExp as arbitrary Expression and a positive integer number
             ArrayList<Boolean> numBool = intToBool(number);
+            //we now have firstExp as arbitrary Expression and a BooleanList for the number
             for (int i = 0; i < firstExp.getWidth() || i < numBool.size(); i++) {
                 Gate tempGate;
                 if (i < firstExp.getWidth()) {
@@ -384,8 +384,8 @@ public class Code {
                 int range = (int) Math.pow(2, firstExp.getWidth());  //so for a 5bit number this would be 32
                 number = range + (number % range);    //if the number is bigger than the range we can ignore all other bits
             }
-            //we now have firstExp as arbitrary Expression and a positive integer number
             ArrayList<Boolean> numBool = intToBool(number);
+            //we now have firstExp as arbitrary Expression and a BooleanList for the number
             for (int i = 0; i < firstExp.getWidth() && i < numBool.size(); i++) {
                 Gate tempGate;
                 if (numBool.get(i)) {
@@ -407,6 +407,56 @@ public class Code {
         return gates;
     }
 
+    public static ArrayList<Gate> xor(ExpressionResult firstExp, ExpressionResult secondExp, SignalExpression xorLines) {
+        ArrayList<Gate> gates = new ArrayList<>();
+        if (firstExp.isNumber || secondExp.isNumber) {
+            //both cant be a number because else the result would be handled by the AST
+            int number = numberNotRes(firstExp, secondExp);
+            firstExp = resNotNumber(firstExp, secondExp);
+            if (number == 0) {
+                //neutral operation, empty gate list
+                return gates;
+            }
+            if (number < 0) {
+                //changes negative number to its positive representation with the given lines
+                int range = (int) Math.pow(2, firstExp.getWidth());  //so for a 5bit number this would be 32
+                number = range + (number % range);    //if the number is bigger than the range we can ignore all other bits
+            }
+            ArrayList<Boolean> numBool = intToBool(number);
+            //we now have firstExp as arbitrary Expression and a BooleanList for the number
+            for (int i = 0; i < firstExp.getWidth() || i < numBool.size(); i++) {
+                Gate tempGate;
+                if (i < firstExp.getWidth()) {
+                    tempGate = new Gate(Toffoli);
+                    tempGate.addTargetLine(xorLines.getLineName(i));
+                    tempGate.addControlLine(firstExp.getLineName(i));
+                    gates.add(tempGate);
+                }
+                if (i < numBool.size() && numBool.get(i)) {
+                    tempGate = new Gate(Toffoli);
+                    tempGate.addTargetLine(xorLines.getLineName(i));
+                    gates.add(tempGate);
+                }
+            }
+        } else {
+            for (int i = 0; i < firstExp.getWidth() || i < secondExp.getWidth(); i++) {
+                if (i < firstExp.getWidth()) {
+                    Gate tempGate = new Gate(Toffoli);
+                    tempGate.addTargetLine(xorLines.getLineName(i));
+                    tempGate.addControlLine(firstExp.getLineName(i));
+                    gates.add(tempGate);
+                }
+                if (i < secondExp.getWidth()) {
+                    Gate tempGate = new Gate(Toffoli);
+                    tempGate.addTargetLine(xorLines.getLineName(i));
+                    tempGate.addControlLine(secondExp.getLineName(i));
+                    gates.add(tempGate);
+                }
+            }
+        }
+        return gates;
+    }
+
     private static ArrayList<Boolean> intToBool(int num) {
         ArrayList<Boolean> booleans = new ArrayList<>();
         for (int i = num; i > 0; i /= 2) {
@@ -416,13 +466,14 @@ public class Code {
     }
 
     private static ExpressionResult resNotNumber(ExpressionResult firstExp, ExpressionResult secondExp) {
-        //returns the first ExpressionResult that is a number
+        //returns the first ExpressionResult that is not a number
         if (!firstExp.isNumber) return firstExp;
         if (!secondExp.isNumber) return secondExp;
         return null;
     }
 
     private static Integer numberNotRes(ExpressionResult firstExp, ExpressionResult secondExp) {
+        //returns the first ExpressionResult that is a number as Integer
         if (firstExp.isNumber) return firstExp.number;
         if (secondExp.isNumber) return secondExp.number;
         return null;

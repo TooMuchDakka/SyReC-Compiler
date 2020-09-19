@@ -90,7 +90,17 @@ public class BinaryExpression extends Expression {
                     return res;
                 }
             case BIT_XOR:
-                break;
+                if (firstRes.isNumber && secondRes.isNumber) {
+                    return new ExpressionResult(firstRes.number ^ secondRes.number);
+                } else {
+                    SignalExpression xorLines = module.getAdditionalLines(Math.max(firstRes.getWidth(), secondRes.getWidth()));
+                    usedLines.addAll(xorLines.getLines());
+                    ExpressionResult res = new ExpressionResult(xorLines);
+                    res.gates.addAll(firstRes.gates);
+                    res.gates.addAll(secondRes.gates);
+                    res.gates.addAll(Code.xor(firstRes, secondRes, xorLines));
+                    return res;
+                }
             case TIMES_UPPER:
                 break;
             case DIVIDE:
