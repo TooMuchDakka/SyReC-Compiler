@@ -218,7 +218,7 @@ public class Code {
         ArrayList<Gate> gates = new ArrayList<>();
         if (exp.isNumber) {
             int number = exp.number;
-            for (int i = 0; (i < Math.ceil(Math.log(exp.number) / Math.log(2)) && i < firstSignal.getWidth()); i++) {
+            for (int i = 0; number != 0; i++) {
                 if (number % 2 == 1) {
                     Gate newGate = new Gate(Toffoli);
                     newGate.addTargetLine(firstSignal.getLineName(i));
