@@ -102,12 +102,24 @@ public class BinaryExpression extends Expression {
                     return res;
                 }
             case TIMES_UPPER:
+                ExpressionResult res1 = new ExpressionResult(0);
+                System.out.println("Placeholder Timesupper generated");
+                res1.gates.addAll(Code.placeholder());
                 break;
             case DIVIDE:
+                ExpressionResult res2 = new ExpressionResult(0);
+                System.out.println("Placeholder Divide generated");
+                res2.gates.addAll(Code.placeholder());
                 break;
             case REMAINDER:
+                ExpressionResult res3 = new ExpressionResult(0);
+                System.out.println("Placeholder Remainder generated");
+                res3.gates.addAll(Code.placeholder());
                 break;
             case TIMES_LOWER:
+                ExpressionResult res4 = new ExpressionResult(0);
+                System.out.println("Placeholder Timeslower generated");
+                res4.gates.addAll(Code.placeholder());
                 break;
 
             case LOG_AND:
@@ -178,18 +190,39 @@ public class BinaryExpression extends Expression {
                     return res;
                 }
             case BIT_OR:
+                ExpressionResult res5 = new ExpressionResult(0);
+                System.out.println("Placeholder BitwiseOr generated");
+                res5.gates.addAll(Code.placeholder());
                 break;
             case LESSER:
+                ExpressionResult res6 = new ExpressionResult(0);
+                System.out.println("Placeholder LesserThan generated");
+                res6.gates.addAll(Code.placeholder());
                 break;
             case GREATER:
+                ExpressionResult res7 = new ExpressionResult(0);
+                System.out.println("Placeholder GreaterThan generated");
+                res7.gates.addAll(Code.placeholder());
                 break;
             case EQL:
+                ExpressionResult res8 = new ExpressionResult(0);
+                System.out.println("Placeholder Equals generated");
+                res8.gates.addAll(Code.placeholder());
                 break;
             case NEQL:
+                ExpressionResult res9 = new ExpressionResult(0);
+                System.out.println("Placeholder NotEquals generated");
+                res9.gates.addAll(Code.placeholder());
                 break;
             case LEQL:
+                ExpressionResult res10 = new ExpressionResult(0);
+                System.out.println("Placeholder LessorEquals generated");
+                res10.gates.addAll(Code.placeholder());
                 break;
             case GEQL:
+                ExpressionResult res11 = new ExpressionResult(0);
+                System.out.println("Placeholder GreaterorEquals generated");
+                res11.gates.addAll(Code.placeholder());
                 break;
         }
         return new ExpressionResult(0);

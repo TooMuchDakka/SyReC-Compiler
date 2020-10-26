@@ -15,8 +15,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collections;
 
-import static CodeGen.Gate.Kind.Fredkin;
-import static CodeGen.Gate.Kind.Toffoli;
+import static CodeGen.Gate.Kind.*;
 
 public class Code {
 
@@ -103,6 +102,9 @@ public class Code {
                     case Vplus:
                         curWriter.append("v+");
                         break;
+                    case Placeholder:
+                        curWriter.append("unimplemented");
+                        break;
                 }
                 curWriter.append(String.valueOf(controlLines.size() + targetLines.size()));
                 for (String line : controlLines) {
@@ -118,6 +120,14 @@ public class Code {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    //Function to generate Placeholder gates (to see if functions for a given SyReC File are missing
+    public static ArrayList<Gate> placeholder() {
+        ArrayList<Gate> gates = new ArrayList<>();
+        Gate placeholderGate = new Gate(Placeholder);
+        gates.add(placeholderGate);
+        return gates;
     }
 
     //swap of two signals

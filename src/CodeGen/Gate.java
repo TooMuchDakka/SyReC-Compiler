@@ -5,7 +5,7 @@ import java.util.ArrayList;
 public class Gate {
     //a class to hold the information of every gate
     public enum Kind {
-        Toffoli, Fredkin, Peres, V, Vplus
+        Toffoli, Fredkin, Peres, V, Vplus, Placeholder
     }
 
     public final Kind kind; //which Gate this object describes

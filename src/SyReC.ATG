@@ -346,7 +346,7 @@ PRODUCTIONS
                                                             swap = new SwapStatement(firstSig, secondSig, lineAware);
                                                         }.).
     SkipStatement<out Statement skip>       =   "skip"      (.skip = new SkipStatement(true);.).
-    //placeholder, needs to be updated to allow arrays and width
+    //TODO, needs to be updated to allow arrays
     Signal<out SignalExpression sig> =   ident              (.String ident = t.val;
                                                             if(!curMod.isDefined(ident)) {
                                                                 SemErr("Signal "+ident+" is not defined");
