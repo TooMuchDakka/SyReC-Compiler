@@ -104,6 +104,7 @@ public class Code {
                         break;
                     case Placeholder:
                         curWriter.append("unimplemented");
+                        System.out.println("Warning, Placeholder Gate was used");
                         break;
                 }
                 curWriter.append(String.valueOf(controlLines.size() + targetLines.size()));
