@@ -83,10 +83,16 @@ public class BinaryExpression extends Expression {
                 } else {
                     SignalExpression minusLines = module.getAdditionalLines(Math.max(firstRes.getWidth(), secondRes.getWidth()));
                     usedLines.addAll(minusLines.getLines());
+                    SignalExpression twosComplementLines = null;
+                    if (!firstRes.isNumber && !secondRes.isNumber) {
+                        //only generate a line for the twos complement if both expressions are no number
+                        twosComplementLines = module.getAdditionalLines(minusLines.getWidth());
+                        usedLines.addAll(twosComplementLines.getLines());
+                    }
                     ExpressionResult res = new ExpressionResult(minusLines);
                     res.gates.addAll(firstRes.gates);
                     res.gates.addAll(secondRes.gates);
-                    res.gates.addAll(Code.minus(firstRes, secondRes, minusLines));
+                    res.gates.addAll(Code.minus(firstRes, secondRes, minusLines, twosComplementLines));
                     return res;
                 }
             case BIT_XOR:

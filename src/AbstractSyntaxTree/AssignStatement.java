@@ -39,13 +39,10 @@ public class AssignStatement extends Statement {
                 break;
             case PLUS:
                 //TODO plusassign
-                System.out.println("Placeholder Plusassign generated");
-                gates.addAll(Code.placeholder());
+                gates.addAll(Code.plusAssign(signalExp, res));
                 break;
             case MINUS:
-                //TODO minusassign
-                System.out.println("Placeholder Minusassign generated");
-                gates.addAll(Code.placeholder());
+                gates.addAll(Code.minusAssign(signalExp, res));
                 break;
         }
         if (lineAware) {

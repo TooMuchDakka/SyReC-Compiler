@@ -284,6 +284,31 @@ public class Code {
         return gates;
     }
 
+    public static ArrayList<Gate> plusAssign(SignalExpression signalExp, ExpressionResult res) {
+        //TODO
+        return null;
+    }
+
+    public static ArrayList<Gate> minusAssign(SignalExpression signalExp, ExpressionResult res) {
+        ArrayList<Gate> gates = new ArrayList<>();
+        if (res.isNumber) {
+            int number = res.number;
+            if (number == 0) {
+                //neutral operation, nothing to do
+                return gates;
+            }
+            if (number < 0) {
+                //if we substract a negative number we can just use plusAssign
+                ExpressionResult negative = new ExpressionResult(-number);
+                return plusAssign(signalExp, negative);
+            }
+        }
+        //apart from the handling of negative or 0 numbers we can just use plusAssign and reverse the result
+        gates = plusAssign(signalExp, res);
+        Collections.reverse(gates);
+        return gates;
+    }
+
     public static ArrayList<Gate> plus(ExpressionResult firstExp, ExpressionResult secondExp, SignalExpression additionalLines) {
         ArrayList<Gate> gates = new ArrayList<>();
         if (firstExp.isNumber || secondExp.isNumber) {
@@ -303,7 +328,9 @@ public class Code {
             }
             if (number < 0) {
                 //if we add a negative number we can just use minus
-                return minus(firstExp, secondExp, additionalLines);
+                //because its a number we dont need the twosComplementLine
+                ExpressionResult negative = new ExpressionResult(-number);
+                return minus(firstExp, negative, additionalLines, null);
             }
             ArrayList<Boolean> numBool = intToBool(number);
             //we now have firstExp as arbitrary Expression and a BooleanList for the number
@@ -334,6 +361,8 @@ public class Code {
             }
         } else {
             //general case, both are lines
+            //TODO this ignores the carry if it propagates over more than one bit and leads to wrong results
+            ArrayList<Gate> reverseGates = new ArrayList<>();
             for (int i = 0; i < firstExp.getWidth() || i < secondExp.getWidth(); i++) {
                 Gate tempGate;
                 if (i < firstExp.getWidth()) {
@@ -351,12 +380,13 @@ public class Code {
                     tempGate.addTargetLine(secondExp.getLineName(i));
                     tempGate.addControlLine(firstExp.getLineName(i - 1));
                     tempGate.addControlLine(secondExp.getLineName(i - 1));
+                    gates.add(tempGate);
 
                     reverseGate = new Gate(Toffoli);
                     reverseGate.addTargetLine(secondExp.getLineName(i));
                     reverseGate.addControlLine(firstExp.getLineName(i - 1));
                     reverseGate.addControlLine(secondExp.getLineName(i - 1));
-                    gates.add(tempGate);
+                    reverseGates.add(reverseGate);
                 }
 
                 if (i < secondExp.getWidth()) {
@@ -366,8 +396,10 @@ public class Code {
                     tempGate.addControlLine(secondExp.getLineName(i));
                     gates.add(tempGate);
                 }
-                if (reverseGate != null) {
-                    gates.add(reverseGate);
+                if (!reverseGates.isEmpty()) {
+                    Collections.reverse(reverseGates);
+                    gates.addAll(reverseGates);
+                    reverseGates.clear();
                 }
             }
         }
@@ -375,9 +407,44 @@ public class Code {
         return gates;
     }
 
-    public static ArrayList<Gate> minus(ExpressionResult firstExp, ExpressionResult secondExp, SignalExpression additionalLines) {
-        //TODO implement minus
-        return null;
+    public static ArrayList<Gate> minus(ExpressionResult firstExp, ExpressionResult secondExp, SignalExpression additionalLines, SignalExpression twosComplementLines) {
+        //The twosComplementLines is null if one of the numbers is a number
+        ArrayList<Gate> gates = new ArrayList<>();
+        if (firstExp.isNumber || secondExp.isNumber) {
+            //both cant be a number because else the result would be handled by the AST
+            int number = numberNotRes(firstExp, secondExp);
+            firstExp = resNotNumber(firstExp, secondExp);
+            if (number == 0) {
+                //neutral operation, just copy Exp to lines
+                for (int i = 0; i < firstExp.getWidth(); i++) {
+                    Gate tempGate;
+                    tempGate = new Gate(Toffoli);
+                    tempGate.addTargetLine(additionalLines.getLineName(i));
+                    tempGate.addControlLine(firstExp.getLineName(i));
+                    gates.add(tempGate);
+                }
+                return gates;
+            }
+            if (number < 0) {
+                //if we substract a negative number we can just use plus
+                ExpressionResult negative = new ExpressionResult(-number);
+                return plus(firstExp, negative, additionalLines);
+            }
+            //create twos complement of number
+            number = ~number;
+            number = (number & (int) Math.pow(2, firstExp.getWidth()) - 1); //drop all unneeded ones
+            number++;
+            return plus(firstExp, secondExp, additionalLines);
+        } else {
+            //second expression is also an expression and not a number
+            //do twosComplement on the SignalLine
+            ExpressionResult twosComplementRes = new ExpressionResult(twosComplementLines);
+            twosComplementRes.gates.addAll(notExp(secondExp, twosComplementRes.signal));
+            twosComplementRes.gates.addAll(increment(twosComplementRes.signal));
+            gates.addAll(twosComplementRes.gates);
+            gates.addAll(plus(firstExp, twosComplementRes, additionalLines));
+            return gates;
+        }
     }
 
     public static ArrayList<Gate> bitwiseAnd(ExpressionResult firstExp, ExpressionResult secondExp, SignalExpression additionalLines) {
@@ -501,5 +568,4 @@ public class Code {
         Collections.reverse(reverse);
         return reverse;
     }
-
 }
