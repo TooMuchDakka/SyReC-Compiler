@@ -285,8 +285,122 @@ public class Code {
     }
 
     public static ArrayList<Gate> plusAssign(SignalExpression signalExp, ExpressionResult res) {
-        //TODO
-        return null;
+        ArrayList<Gate> gates = new ArrayList<>();
+        if (res.isNumber) {
+            //both cant be a number because else the result would be handled by the AST
+            int number = res.number;
+            if (number == 0) {
+                //neutral operation, return empty list
+                return gates;
+            }
+            if (number < 0) {
+                //if we add a negative number we can just use minus
+                //because its a number we dont need the twosComplementLine
+                ExpressionResult negative = new ExpressionResult(-number);
+                return minusAssign(signalExp, negative);
+            }
+            ArrayList<Boolean> numBool = intToBool(number);
+            while (numBool.size() < signalExp.getWidth()) {
+                numBool.add(false);
+            }
+            ArrayList<Boolean> numBoolCopy = new ArrayList<>(numBool);
+            //we now have firstExp as arbitrary Expression and a BooleanList for the number
+            //general case, both are lines
+            for (int i = 1; i < numBool.size(); i++) {
+                //xn ^= yn
+                if (numBool.get(i)) {
+                    Gate tempGate = new Gate(Toffoli);
+                    tempGate.addTargetLine(signalExp.getLineName(i));
+                    gates.add(tempGate);
+                }
+            }
+            for (int i = numBool.size() - 1; i > 1; i--) {
+                //yn ^= yn-1 till y2 ^= y1
+                numBool.set(i, numBool.get(i) ^ numBool.get(i - 1));
+            }
+
+            for (int i = numBool.size() - 1; i > 0; i--) {
+                //yn ^= xn-1 & yn-1 and xn ^= yn but we cant write to yn so we do it directly
+                //ax -> a1
+                for (int j = i; j >= 0; j--) {
+                    //bx->b0
+                    if (numBool.get(j)) {
+                        Gate tempGate = new Gate(Toffoli);
+                        tempGate.addTargetLine(signalExp.getLineName(i));
+                        for (int k = i - 1; k >= j; k--) {
+                            tempGate.addControlLine(signalExp.getLineName(k));
+                        }
+                        gates.add(tempGate);
+                    }
+
+                }
+            }
+            for (int i = 0; i < numBoolCopy.size(); i++) {
+                //yn ^= x1n
+                if (numBoolCopy.get(i)) {
+                    Gate tempGate = new Gate(Toffoli);
+                    tempGate.addTargetLine(signalExp.getLineName(i));
+                    gates.add(tempGate);
+                }
+            }
+
+        } else {
+            //general case, both are lines
+            for (int i = 1; i < res.getWidth(); i++) {
+                //xn ^= yn
+                Gate tempGate = new Gate(Toffoli);
+                tempGate.addTargetLine(signalExp.getLineName(i));
+                tempGate.addControlLine(res.getLineName(i));
+                gates.add(tempGate);
+
+            }
+            for (int i = res.getWidth() - 1; i > 1; i--) {
+                //yn ^= yn-1 till y2 ^= y1
+                Gate tempGate = new Gate(Toffoli);
+                tempGate.addTargetLine(res.getLineName(i));
+                tempGate.addControlLine(res.getLineName(i - 1));
+                gates.add(tempGate);
+            }
+            int gatenum;
+            for (gatenum = 1; gatenum < signalExp.getWidth() && gatenum < res.getWidth(); gatenum++) {
+                //yn ^= xn-1 & yn-1
+                Gate tempGate = new Gate(Toffoli);
+                tempGate.addTargetLine(res.getLineName(gatenum));
+                tempGate.addControlLine(signalExp.getLineName(gatenum - 1));
+                tempGate.addControlLine(res.getLineName(gatenum - 1));
+                gates.add(tempGate);
+            }
+            for (int i = gatenum; i > 0; i--) {
+                //xn ^= yn
+                Gate tempGate = new Gate(Toffoli);
+                tempGate.addTargetLine(signalExp.getLineName(i));
+                tempGate.addControlLine(res.getLineName(i));
+                gates.add(tempGate);
+                //reversal of yn ^= xn-1 & yn-1
+                tempGate = new Gate(Toffoli);
+                tempGate.addTargetLine(res.getLineName(gatenum));
+                tempGate.addControlLine(signalExp.getLineName(gatenum - 1));
+                tempGate.addControlLine(res.getLineName(gatenum - 1));
+                gates.add(tempGate);
+            }
+            for (int i = 2; i < res.getWidth(); i++) {
+                //reversal of yn ^= yn-1 till y2 ^= y1
+                Gate tempGate = new Gate(Toffoli);
+                tempGate.addTargetLine(res.getLineName(i));
+                tempGate.addControlLine(res.getLineName(i - 1));
+                gates.add(tempGate);
+            }
+            for (int i = 0; i < res.getWidth(); i++) {
+                //yn ^= x1n
+                Gate tempGate = new Gate(Toffoli);
+                tempGate.addTargetLine(signalExp.getLineName(i));
+                tempGate.addControlLine(res.getLineName(i));
+                gates.add(tempGate);
+
+            }
+        }
+
+        return gates;
     }
 
     public static ArrayList<Gate> minusAssign(SignalExpression signalExp, ExpressionResult res) {
@@ -333,74 +447,120 @@ public class Code {
                 return minus(firstExp, negative, additionalLines, null);
             }
             ArrayList<Boolean> numBool = intToBool(number);
+            while (numBool.size() < firstExp.getWidth()) {
+                numBool.add(false);
+            }
+            ArrayList<Boolean> numBoolCopy = new ArrayList<>(numBool);
             //we now have firstExp as arbitrary Expression and a BooleanList for the number
-            for (int i = 0; i < firstExp.getWidth() || i < numBool.size(); i++) {
-                Gate tempGate;
-                if (i < firstExp.getWidth()) {
-                    //yn = xn
-                    tempGate = new Gate(Toffoli);
+            //general case, both are lines
+            for (int i = 0; i < firstExp.getWidth(); i++) {
+                //Write x to additional line
+                Gate tempGate = new Gate(Toffoli);
+                tempGate.addTargetLine(additionalLines.getLineName(i));
+                tempGate.addControlLine(firstExp.getLineName(i));
+                gates.add(tempGate);
+
+            }
+            for (int i = 1; i < numBool.size(); i++) {
+                //xn ^= yn
+                if (numBool.get(i)) {
+                    Gate tempGate = new Gate(Toffoli);
                     tempGate.addTargetLine(additionalLines.getLineName(i));
-                    tempGate.addControlLine(firstExp.getLineName(i));
                     gates.add(tempGate);
-                }
-                if (i < numBool.size() && numBool.get(i)) {
-                    //toggle yn when number on this digit is set
-                    tempGate = new Gate(Toffoli);
-                    tempGate.addTargetLine(additionalLines.getLineName(i));
-                    gates.add(tempGate);
-                }
-                if (i > 0 && i <= firstExp.getWidth() && i <= numBool.size()) {
-                    //if both previous digits are set toggle yn again (carry)
-                    tempGate = new Gate(Toffoli);
-                    tempGate.addTargetLine(additionalLines.getLineName(i));
-                    tempGate.addControlLine(firstExp.getLineName(i - 1));
-                    if (numBool.get(i - 1)) {
-                        gates.add(tempGate);
-                    }
                 }
             }
+            for (int i = numBool.size() - 1; i > 1; i--) {
+                //yn ^= yn-1 till y2 ^= y1
+                numBool.set(i, numBool.get(i) ^ numBool.get(i - 1));
+            }
+
+            for (int i = numBool.size() - 1; i > 0; i--) {
+                //yn ^= xn-1 & yn-1 and xn ^= yn but we cant write to yn so we do it directly
+                //ax -> a1
+                for (int j = i; j >= 0; j--) {
+                    //bx->b0
+                    if (numBool.get(j)) {
+                        Gate tempGate = new Gate(Toffoli);
+                        tempGate.addTargetLine(additionalLines.getLineName(i));
+                        for (int k = i; k >= j; k--) {
+                            tempGate.addControlLine(firstExp.getLineName(k));
+                        }
+                        gates.add(tempGate);
+                    }
+
+                }
+            }
+
+
+            for (int i = 0; i < numBoolCopy.size(); i++) {
+                //yn ^= x1n
+                if (numBoolCopy.get(i)) {
+                    Gate tempGate = new Gate(Toffoli);
+                    tempGate.addTargetLine(additionalLines.getLineName(i));
+                    gates.add(tempGate);
+                }
+            }
+
         } else {
             //general case, both are lines
-            //TODO this ignores the carry if it propagates over more than one bit and leads to wrong results
-            ArrayList<Gate> reverseGates = new ArrayList<>();
-            for (int i = 0; i < firstExp.getWidth() || i < secondExp.getWidth(); i++) {
-                Gate tempGate;
-                if (i < firstExp.getWidth()) {
-                    //yn = x1n
-                    tempGate = new Gate(Toffoli);
-                    tempGate.addTargetLine(additionalLines.getLineName(i));
-                    tempGate.addControlLine(firstExp.getLineName(i));
-                    gates.add(tempGate);
-                }
-                Gate reverseGate = null;
-                if (i > 0 && i <= firstExp.getWidth() && i <= secondExp.getWidth()) {
-                    //toggle secondExp Line if both previous digits were set
-                    //also prepare reverseGate for later
-                    tempGate = new Gate(Toffoli);
-                    tempGate.addTargetLine(secondExp.getLineName(i));
-                    tempGate.addControlLine(firstExp.getLineName(i - 1));
-                    tempGate.addControlLine(secondExp.getLineName(i - 1));
-                    gates.add(tempGate);
+            for (int i = 0; i < firstExp.getWidth(); i++) {
+                //Write x to additional line
+                Gate tempGate = new Gate(Toffoli);
+                tempGate.addTargetLine(additionalLines.getLineName(i));
+                tempGate.addControlLine(firstExp.getLineName(i));
+                gates.add(tempGate);
 
-                    reverseGate = new Gate(Toffoli);
-                    reverseGate.addTargetLine(secondExp.getLineName(i));
-                    reverseGate.addControlLine(firstExp.getLineName(i - 1));
-                    reverseGate.addControlLine(secondExp.getLineName(i - 1));
-                    reverseGates.add(reverseGate);
-                }
+            }
+            for (int i = 1; i < secondExp.getWidth(); i++) {
+                //xn ^= yn
+                Gate tempGate = new Gate(Toffoli);
+                tempGate.addTargetLine(additionalLines.getLineName(i));
+                tempGate.addControlLine(secondExp.getLineName(i));
+                gates.add(tempGate);
 
-                if (i < secondExp.getWidth()) {
-                    //toggle yn with x2n
-                    tempGate = new Gate(Toffoli);
-                    tempGate.addTargetLine(additionalLines.getLineName(i));
-                    tempGate.addControlLine(secondExp.getLineName(i));
-                    gates.add(tempGate);
-                }
-                if (!reverseGates.isEmpty()) {
-                    Collections.reverse(reverseGates);
-                    gates.addAll(reverseGates);
-                    reverseGates.clear();
-                }
+            }
+            for (int i = secondExp.getWidth() - 1; i > 1; i--) {
+                //yn ^= yn-1 till y2 ^= y1
+                Gate tempGate = new Gate(Toffoli);
+                tempGate.addTargetLine(secondExp.getLineName(i));
+                tempGate.addControlLine(secondExp.getLineName(i - 1));
+                gates.add(tempGate);
+            }
+            for (int i = 1; i < firstExp.getWidth() && i < secondExp.getWidth(); i++) {
+                //yn ^= xn-1 & yn-1
+                Gate tempGate = new Gate(Toffoli);
+                tempGate.addTargetLine(secondExp.getLineName(i));
+                tempGate.addControlLine(additionalLines.getLineName(i - 1));
+                tempGate.addControlLine(secondExp.getLineName(i - 1));
+                gates.add(tempGate);
+            }
+            for (int i = Math.min(firstExp.getWidth(), secondExp.getWidth()) - 1; i > 0; i--) {
+                //xn ^= yn
+                Gate tempGate = new Gate(Toffoli);
+                tempGate.addTargetLine(additionalLines.getLineName(i));
+                tempGate.addControlLine(secondExp.getLineName(i));
+                gates.add(tempGate);
+                //reversal of yn ^= xn-1 & yn-1
+                tempGate = new Gate(Toffoli);
+                tempGate.addTargetLine(secondExp.getLineName(i));
+                tempGate.addControlLine(additionalLines.getLineName(i - 1));
+                tempGate.addControlLine(secondExp.getLineName(i - 1));
+                gates.add(tempGate);
+            }
+            for (int i = 2; i < secondExp.getWidth(); i++) {
+                //reversal of yn ^= yn-1 till y2 ^= y1
+                Gate tempGate = new Gate(Toffoli);
+                tempGate.addTargetLine(secondExp.getLineName(i));
+                tempGate.addControlLine(secondExp.getLineName(i - 1));
+                gates.add(tempGate);
+            }
+            for (int i = 0; i < secondExp.getWidth(); i++) {
+                //yn ^= x1n
+                Gate tempGate = new Gate(Toffoli);
+                tempGate.addTargetLine(additionalLines.getLineName(i));
+                tempGate.addControlLine(secondExp.getLineName(i));
+                gates.add(tempGate);
+
             }
         }
 
