@@ -38,7 +38,6 @@ public class AssignStatement extends Statement {
                 gates.addAll(Code.xorAssign(signalExp, res));
                 break;
             case PLUS:
-                //TODO plusassign
                 gates.addAll(Code.plusAssign(signalExp, res));
                 break;
             case MINUS:
