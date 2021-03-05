@@ -3,7 +3,7 @@
 .numvars 7
 .variables a b c d addLine2 addLine0 addLine1 
 .constants --00000
-.garbage 11-----
+.garbage -1-----
 .begin
 t1 c
 t1 d

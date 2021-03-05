@@ -28,7 +28,7 @@ public class Obj {
     }
 
     private void setGarbage() {
-        garbage = (kind != Kind.Out);
+        garbage = (kind != Kind.Out && kind != Kind.Inout);
     }
 
     private void setConstant() {
