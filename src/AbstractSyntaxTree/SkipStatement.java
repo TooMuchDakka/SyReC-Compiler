@@ -16,7 +16,6 @@ public class SkipStatement extends Statement {
         //return new ArrayList<Gate>(); //Skip statement returns empty gate list
         //TODO remvoe DEBUG
         ArrayList<Gate> gates = new ArrayList<>();
-        gates.add(new Gate(Gate.Kind.V));
         return gates;
     }
 
