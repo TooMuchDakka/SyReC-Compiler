@@ -834,7 +834,7 @@ public class Parser {
 		} else SynErr(67);
 		Expression exp = Expression();
 		if(kind == UnaryExpression.Kind.LOGICAL) {
-		 if(exp.getWidth() == 1) {
+		 if(exp.getWidth() != 1) {
 		     SemErr("Logical Not on a Busline or an Expression that is not a boolean");
 		     unExp = new NumberExpression(0);
 		 }

@@ -43,6 +43,7 @@ COMPILER SyReC
                 else if(next.kind == ')'){
                     i--;
                 }
+                //TODO edge case missing ) Probably check on ';'
                 next = scanner.Peek();
             }
             return next.kind == _to;
@@ -443,7 +444,8 @@ PRODUCTIONS
     UnaryExpression<out Expression unExp>     =                                        (.UnaryExpression.Kind kind = UnaryExpression.Kind.LOGICAL;.)
                                                     ('!'|'~'                                (.kind = UnaryExpression.Kind.BITWISE;.)
                                                     ) Expression<out Expression exp>        (.if(kind == UnaryExpression.Kind.LOGICAL) {
-                                                                                                if(exp.getWidth() == 1) {
+                                                                                                if(exp.getWidth() != 1) {
+                                                                                                //TODO width of BITWIDTH cant be dynamically checked during parse
                                                                                                     SemErr("Logical Not on a Busline or an Expression that is not a boolean");
                                                                                                     unExp = new NumberExpression(0);
                                                                                                 }
