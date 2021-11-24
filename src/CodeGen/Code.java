@@ -370,6 +370,7 @@ public class Code {
                 tempGate.addControlLine(res.getLineName(gatenum - 1));
                 gates.add(tempGate);
             }
+            gatenum--;
             for (int i = gatenum; i > 0; i--) {
                 //xn ^= yn
                 Gate tempGate = new Gate(Toffoli);
