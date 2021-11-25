@@ -115,6 +115,10 @@ public class Parser {
                     else if(next.val.equals(")")){
                         i--;
                     }
+                    else if(next.val.equals(";") || next.val.equals("")) {
+                        //missing closing bracket
+                        return false;
+                    }
                     else if(i == 1 && BinExp.contains(next.val)){
                         return true;
                     }
