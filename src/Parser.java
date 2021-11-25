@@ -55,14 +55,18 @@ public class Parser {
                     next = scanner.Peek();
                     return next.kind == _to;
         }
-        if(la.kind == '(') {
+        if(la.val.equals("(")) {
             int i = 1;
             while (i > 0) {
-                if(next.kind == '(') {
+                if(next.val.equals("(")) {
                     i++;
                 }
-                else if(next.kind == ')'){
+                else if(next.val.equals(")")){
                     i--;
+                }
+                else if(next.val.equals(";") || next.val.equals("")) {
+                    //missing closing bracket
+                    return false;
                 }
                 next = scanner.Peek();
             }
@@ -84,6 +88,10 @@ public class Parser {
                 }
                 else if(next.val.equals(")")){
                     i--;
+                }
+                else if(next.val.equals(";") || next.val.equals("")) {
+                    //missing closing bracket
+                    return false;
                 }
                 else if(i == 1 && (next.kind == _shiftL || next.kind == _shiftR)){
                     return true;
@@ -835,6 +843,7 @@ public class Parser {
 		Expression exp = Expression();
 		if(kind == UnaryExpression.Kind.LOGICAL) {
 		 if(exp.getWidth() != 1) {
+		 //TODO width of BITWIDTH cant be dynamically checked during parse
 		     SemErr("Logical Not on a Busline or an Expression that is not a boolean");
 		     unExp = new NumberExpression(0);
 		 }
