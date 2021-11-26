@@ -1,0 +1,16 @@
+# control
+.version 2.0
+.numvars 6
+.variables a b_0 b_1 c_0 c_1 addLine0 
+.constants -00000
+.garbage 1-----
+.begin
+t2 a addLine0
+t3 b_0 addLine0 b_1
+t2 addLine0 b_0
+t1 addLine0
+t3 c_0 addLine0 c_1
+t2 addLine0 c_0
+t1 addLine0
+t2 a addLine0
+.end

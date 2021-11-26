@@ -1,0 +1,12 @@
+# loop
+.version 2.0
+.numvars 5
+.variables a_0 a_1 b_0 b_1 c 
+.constants --000
+.garbage 11---
+.begin
+t2 b_0 a_0
+t1 c
+t2 b_1 a_1
+t1 c
+.end

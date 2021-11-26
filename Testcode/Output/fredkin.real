@@ -1,0 +1,13 @@
+# fredkin
+.version 2.0
+.numvars 4
+.variables a b c addLine0 
+.constants ---0
+.garbage 1---
+.begin
+t2 a addLine0
+f3 addLine0 b c
+t1 addLine0
+t1 addLine0
+t2 a addLine0
+.end

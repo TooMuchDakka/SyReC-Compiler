@@ -1,0 +1,53 @@
+module toffoli (in a(2), out b(2))
+	b^=a
+
+module fredkin (in a, inout b, inout c)
+	if a then
+		b <=> c
+	else
+		skip
+	fi a
+
+
+module expression (in a(2), in b(2), out c(2))
+@lineOff
+	a^= (b+c)
+
+module control (in a, out b(2), out c(2))
+	if a then
+		++=b
+	else
+		++=c
+	fi a
+
+
+module loop (in a(2), out b(2), out c)
+	for $loopVar = 0 to 1
+		a.$loopVar ^= b.$loopVar;
+		~=c
+	rof
+	
+
+module assignment (in a(2), out b(2))
+    a^=b
+
+@lineOn
+module lineAwareExpression (in a(2), in b(2), out c(2))
+	a^= (b+c)
+	
+module astExample (in a(2), in b(2), out c(2))
+	if ((a.0 ^ b.0) || (a.1 & b.1)) then
+		++=c
+	else
+		--=c
+	fi ((a.0 ^ b.0) || (a.1 & b.1));
+	c ^= a
+	
+module rippleCarry (in a(3), in b(3), out s(3), inout c(3))
+	s.0 ^= (a.0 ^ b.0);
+	c.0 ^= (a.0 & b.0);
+	for $n = 1 to (#a-1)
+		s.$n ^= ((a.$n ^ b.$n) ^ c.($n-1));
+		c.$n ^= ~(~(a.$n & b.$n) & ~(c.($n-1) & (a.$n ^ b.$n)))
+	rof
+	

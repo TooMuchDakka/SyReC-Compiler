@@ -1,0 +1,63 @@
+# astExample
+.version 2.0
+.numvars 10
+.variables a_0 a_1 b_0 b_1 c_0 c_1 addLine2 addLine1 addLine0 addLine3 
+.constants ----000000
+.garbage 1111------
+.begin
+t2 a_0 addLine0
+t2 b_0 addLine0
+t3 a_1 b_1 addLine1
+t1 addLine0
+t1 addLine1
+t3 addLine0 addLine1 addLine2
+t1 addLine2
+t1 addLine0
+t1 addLine1
+t2 addLine2 addLine3
+t1 addLine1
+t1 addLine0
+t1 addLine2
+t3 addLine0 addLine1 addLine2
+t1 addLine1
+t1 addLine0
+t3 a_1 b_1 addLine1
+t2 b_0 addLine0
+t2 a_0 addLine0
+t3 c_0 addLine3 c_1
+t2 addLine3 c_0
+t1 addLine3
+t2 addLine3 c_0
+t3 c_0 addLine3 c_1
+t1 addLine3
+t2 a_0 addLine2
+t2 b_0 addLine2
+t3 a_1 b_1 addLine1
+t1 addLine2
+t1 addLine1
+t3 addLine2 addLine1 addLine0
+t1 addLine0
+t1 addLine2
+t1 addLine1
+t2 addLine0 addLine3
+t1 addLine1
+t1 addLine2
+t1 addLine0
+t3 addLine2 addLine1 addLine0
+t1 addLine1
+t1 addLine2
+t3 a_1 b_1 addLine1
+t2 b_0 addLine2
+t2 a_0 addLine2
+t1 addLine1
+t1 addLine2
+t1 addLine0
+t3 addLine2 addLine1 addLine0
+t1 addLine1
+t1 addLine2
+t3 a_1 b_1 addLine1
+t2 b_0 addLine2
+t2 a_0 addLine2
+t2 a_0 c_0
+t2 a_1 c_1
+.end

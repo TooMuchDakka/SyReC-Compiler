@@ -1,0 +1,18 @@
+# expression
+.version 2.0
+.numvars 8
+.variables a_0 a_1 b_0 b_1 c_0 c_1 addLine1 addLine0 
+.constants ----0000
+.garbage 1111--11
+.begin
+t2 b_0 addLine0
+t2 b_1 addLine1
+t2 c_1 addLine1
+t3 addLine0 c_0 c_1
+t2 c_1 addLine1
+t3 addLine0 c_0 c_1
+t2 c_0 addLine0
+t2 c_1 addLine1
+t2 addLine0 a_0
+t2 addLine1 a_1
+.end
