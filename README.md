@@ -2,6 +2,59 @@
 
 This project was developed to attain the Bachelors Degree at the *Johannes Kepler University*. It implements the SyReC grammar and synthesises it into the Revlib REAL format.
 
+# Implemented Functionality
+The following table shows for which functionality a building block is already present in the code:
+|                    | implemented | partly | not implemented |
+|--------------------|:-------------:|:--------:|:-----------------:|
+| ***Statements***         |        | X   |            |
+| **call**               | X        |   |            |
+| **for**                | X        |   |            |
+| **if**                 | X        |   |            |
+|                    |             |        |                 |
+| **assign**             | X        |   |            |
+| XOR assign         | X        |   |            |
+| PLUS assign        | X        |   |            |
+| MINUS assign       | X        |   |            |
+|                    |             |        |                 |
+| **unary**              | X        |   |            |
+| negation           | X        |   |            |
+| increment          | X        |   |            |
+| decrement          | X        |   |            |
+|                    |             |        |                 |
+| **swap**               | X        |   |            |
+| **skip**               | X        |   |            |
+|                    |             |        |                 |
+| **signal**             |        | X   |            |
+| bus                | X        |   |            |
+| array              |        |   | X            |
+|                    |             |        |                 |
+|                    |             |        |                 |
+| ***Expressions***        |        | X   |            |
+| **unary**              | X        |   |            |
+| logical negation   | X        |   |            |
+| binary negation    | X        |   |            |
+|                    |             |        |                 |
+| **shift**              | X        |   |            |
+|                    |             |        |                 |
+| **binary expressions** |        | X   |            |
+| plus               | X        |   |            |
+| minus              | X        |   |            |
+| xor                | X        |   |            |
+| times              |        |   | X            |
+| divide             |        |   | X            |
+| modulo             |        |   | X            |
+| times upper        |        |   | X            |
+| and                | X        |   |            |
+| or                 | X        |   |            |
+| bitwise and        | X        |   |            |
+| bitwise or         |        |   | X            |
+| less than          |        |   | X            |
+| greater than       |        |   | X            |
+| equal              |        |   | X            |
+| not equal          |        |   | X            |
+| less or equal      |        |   | X            |
+| greater or equal   |        |   | X            |
+
 # Project Structure
 The project is structured in 3 main steps, the parsing, the generation of the gate list and the writing of the gate list in the REAL format.
 
