@@ -47,4 +47,9 @@ public class Gate {
     public ArrayList<String> getTargetLines() {
         return new ArrayList<>(targetLines);
     }
+
+    public int getNumberOfLines(){return controlLines.size() + targetLines.size();}
+
+    public int getNumberOfControlLines() { return controlLines.size(); }
+    public int getNumberOfTargetLines() { return targetLines.size(); }
 }

@@ -1,7 +1,10 @@
 
 
 import SymTable.SymTable;
-    import java.util.Set;
+
+import java.io.File;
+import java.nio.file.Path;
+import java.util.Set;
     import SymTable.Obj;
     import SymTable.Mod;
     import CodeGen.Code;
@@ -35,6 +38,9 @@ public class Parser {
 	
 	public Scanner scanner;
 	public Errors errors;
+	private String exportLocation;
+	private String inputFileName;
+	private Path builtExportResultPath;
 
 	private boolean IsIdentEql(){
         scanner.ResetPeek();
@@ -128,11 +134,6 @@ public class Parser {
         }
         SymTable tab = new SymTable();
         Mod curMod;
-
-        private String fileName = null;
-        public void setName(String name){
-            fileName = name;
-        }
 
         private HashMap<String, CodeMod> finishedModules = new HashMap<>();
 
@@ -303,11 +304,12 @@ public class Parser {
 		}
 		CodeMod codeModule = Code.createModule(curMod);
 		finishedModules.put(curMod.name, codeModule);
-		ExpressionResult ifExp = new ExpressionResult(1); //generate alwaysTrue if
-		
+
 		ArrayList<Statement> statements = StatementList();
 		codeModule.addStatements(statements);
-		Code.endModule(fileName, curMod, codeModule);
+
+		if (this.builtExportResultPath != null)
+			Code.endModule(this.builtExportResultPath, curMod, codeModule);
 	}
 
 	void ParameterList() {
@@ -863,7 +865,25 @@ public class Parser {
 
 
 
-	public void Parse() {
+	public void Parse(String inputFileName, String exportLocation) {
+		if (inputFileName == null || inputFileName.isEmpty())
+			return;
+
+		this.inputFileName = inputFileName;
+		this.exportLocation = exportLocation;
+		this.builtExportResultPath = null;
+
+		if (this.exportLocation != null && !this.exportLocation.isEmpty()) {
+			Path inputFilePath = Path.of(inputFileName);
+			inputFileName = inputFilePath.getFileName().toString();
+
+			int inputFileNameExtensionIndex = inputFileName.lastIndexOf('.');
+			if (inputFileNameExtensionIndex != -1) {
+				inputFileName = inputFileName.substring(0, inputFileNameExtensionIndex);
+			}
+			this.builtExportResultPath = Path.of(exportLocation, inputFileName + ".real");
+		}
+
 		la = new Token();
 		la.val = "";		
 		Get();

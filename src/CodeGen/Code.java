@@ -8,116 +8,194 @@ import SymTable.Obj;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
+import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
+import java.util.function.BiFunction;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static CodeGen.Gate.Kind.*;
 
 public class Code {
 
+    private static class RealHeaderSignalDefinitionEntry {
+        public String variableIdent;
+        public String inputIdent;
+        public String outputIdent;
+        public String isConstantStatusStringified;
+        public String isGarbageStatusStringified;
+        public int bitWidth;
+        public boolean wasInputPadded;
+    }
 
     public static CodeMod createModule(Mod module) {
         return new CodeMod(module.name, module.getLocals());
     }
 
-    public static void endModule(String folderName, Mod module, CodeMod curMod) {
-        //ends the module and writes it to file
-        Path curPath = Path.of(folderName);
-        try {
-            Files.createDirectory(curPath);
-        } catch (FileAlreadyExistsException ee) {
-            //do nothing as the directory already exists
-        } catch (IOException e) {
-            System.err.println("Failed to create directory!" + e.getMessage());
-        }
-        try { //delete File if it already exists
-            Files.deleteIfExists(Path.of(curPath.toString(), module.name + ".real"));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        try {
-            //create Writer
-            BufferedWriter curWriter = Files.newBufferedWriter(Path.of(curPath.toString(), module.name + ".real"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-            ArrayList<Gate> gates = curMod.generate();
-            curWriter.append("# ").append(module.name);
-            curWriter.newLine();
-            curWriter.append(".version 2.0");
-            curWriter.newLine();
-            curWriter.append(".numvars ").append(String.valueOf(curMod.getVarCount()));
-            curWriter.newLine();
-            ArrayList<Obj> lines = curMod.getVariables();
-            curWriter.append(".variables ");
-            for (Obj line : lines) {
-                if (line.width == 1) {
-                    curWriter.append(line.name).append(" "); //write each variable
-                } else for (int i = 0; i < line.width; i++) {
-                    curWriter.append(line.name).append("_").append(String.valueOf(i)).append(" "); //write all subvariables of the width
-                }
-            }
-            //TODO inputs and outputs (optional and not specified in SyReC)
-            curWriter.newLine();
-            curWriter.append(".constants ");
-            for (Obj line : lines) {
-                if (line.getConstant()) {
-                    curWriter.append(String.join("", Collections.nCopies(line.width, "0")));
-                } else {
-                    curWriter.append(String.join("", Collections.nCopies(line.width, "-")));
-                }
-            }
-            curWriter.newLine();
-            curWriter.append(".garbage ");
-            for (Obj line : lines) {
-                if (line.getGarbage()) {
-                    curWriter.append(String.join("", Collections.nCopies(line.width, "1")));
-                } else {
-                    curWriter.append(String.join("", Collections.nCopies(line.width, "-")));
-                }
-            }
-            curWriter.newLine();
-            curWriter.append(".begin");
-            curWriter.newLine();
+    public static String stringifyRealHeaderSignalDefinitions(List<RealHeaderSignalDefinitionEntry> collection, BiFunction<RealHeaderSignalDefinitionEntry, Integer, String> perCollectionMapper, String stringifiedBitDelimiter, String stringifiedEntryDelimiter) {
+        return collection
+                .stream()
+                .map(entry -> {
+                    if (entry.bitWidth == 1) {
+                        String generatedIdent = perCollectionMapper.apply(entry, 0);
+                        int bitDelimitedIndex = generatedIdent.lastIndexOf("_");
+                        if (bitDelimitedIndex == -1)
+                            return generatedIdent;
+                        
+                        return generatedIdent.substring(0, bitDelimitedIndex);
+                    } else {
+                        return IntStream.range(0, entry.bitWidth)
+                                .mapToObj(i -> perCollectionMapper.apply(entry, i))
+                                .collect(Collectors.joining(stringifiedBitDelimiter));
+                    }
+                }).collect(Collectors.joining(stringifiedEntryDelimiter));
+    }
 
-            //here the gates start
+    public static String stringifyGate(Gate gate, Map<String, String> ioToVariableMapping) {
+        StringBuilder stringifiedGateDefinition = new StringBuilder();
+        switch (gate.kind) {
+            case Toffoli:
+                stringifiedGateDefinition.append("t");
+                break;
+            case Fredkin:
+                stringifiedGateDefinition.append("f");
+                break;
+            case Peres:
+                stringifiedGateDefinition.append("p");
+                break;
+            case V:
+                stringifiedGateDefinition.append("v");
+                break;
+            case Vplus:
+                stringifiedGateDefinition.append("v+");
+                break;
+            case Placeholder:
+                stringifiedGateDefinition.append("unimplemented");
+                System.out.println("Warning, Placeholder Gate was used");
+                break;
+        }
+        if (gate.getNumberOfLines() == 0)
+            throw new IllegalArgumentException("Gate with no control or target lines detected!");
+
+        stringifiedGateDefinition.append(gate.getNumberOfLines());
+
+        if (gate.getNumberOfControlLines() > 0)
+            stringifiedGateDefinition.append(" " + gate.getControlLines().stream().map(controlLine -> ioToVariableMapping.get(controlLine)).collect(Collectors.joining(" ")));
+
+        if (gate.getNumberOfTargetLines() == 0)
+            throw new IllegalArgumentException("Gate with no target lines detected!");
+
+        stringifiedGateDefinition.append(" " + gate.getTargetLines().stream().map(targetLine -> ioToVariableMapping.get(targetLine)).collect(Collectors.joining(" ")));
+        stringifiedGateDefinition.append(" #Original target lines: GATE ");
+        stringifiedGateDefinition.append(String.join(" ", gate.getControlLines()));
+        stringifiedGateDefinition.append(gate.getNumberOfControlLines() > 0 ? " " : "");
+        stringifiedGateDefinition.append(String.join(" ", gate.getTargetLines()));
+        return stringifiedGateDefinition.toString();
+    }
+
+    public static void endModule(Path exportFilePath, Mod module, CodeMod curMod) {
+        List<Gate> gates = curMod.generate();
+
+        int totalBitLengthSumOfUsedModuleSignalLines = curMod.getVariables().stream().map(variable -> variable.width).reduce(0, Integer::sum);
+        List<RealHeaderSignalDefinitionEntry> realHeaderDefinitions = new ArrayList<>(curMod.getVariables().size());
+
+        final String IS_GARBAGE_DEFINITION_ENTRY = "1";
+        final String IS_NOT_GARBAGE_DEFINITION_ENTRY = "-";
+        final String IS_CONSTANT_ZERO_DEFINITION_ENTRY = "0";
+        final String IS_CONSTANT_ONE_DEFINITION_ENTRY = "1";
+        final String IS_NOT_CONSTANT_DEFINITION_ENTRY = "-";
+        final String SIGNAL_IDENT_AND_BIT_DELIMITER = "_";
+        final String PADDING_INPUT_IDENT = SIGNAL_IDENT_AND_BIT_DELIMITER + "pI";
+        final String PADDING_OUTPUT_IDENT = SIGNAL_IDENT_AND_BIT_DELIMITER + "pO";
+        final String VARIABLE_IDENT = SIGNAL_IDENT_AND_BIT_DELIMITER + "v";
+
+        int variableCounter = 0;
+        int inputPaddingCounter = 0;
+        int outputPaddingCounter = 0;
+        for (Obj signal : curMod.getVariables()) {
+            Boolean isGarbageFlag = signal.kind == Obj.Kind.Wire;
+            Optional<Boolean> isConstantFlag = signal.kind == Obj.Kind.Out || signal.kind == Obj.Kind.Wire ? Optional.of(false) : Optional.empty();
+
+            String inputDefinitionEntryForSignal = signal.name;
+            String outputDefinitionEntryForSignal = signal.name;
+            Boolean wasInputIdentPadded = false;
+            if (signal.kind == Obj.Kind.In) {
+                outputDefinitionEntryForSignal = PADDING_OUTPUT_IDENT + outputPaddingCounter;
+                outputPaddingCounter++;
+            } else {
+                if (signal.kind != Obj.Kind.Inout) {
+                    inputDefinitionEntryForSignal = PADDING_INPUT_IDENT + inputPaddingCounter;
+                    inputPaddingCounter++;
+                    wasInputIdentPadded = true;
+                }
+            }
+
+            String isConstantFlagStringified = IS_NOT_CONSTANT_DEFINITION_ENTRY;
+            if (isConstantFlag.isPresent())
+                isConstantFlagStringified = isConstantFlag.get() ? IS_CONSTANT_ONE_DEFINITION_ENTRY : IS_CONSTANT_ZERO_DEFINITION_ENTRY;
+
+            String isGarbageFlagStringified = isGarbageFlag ? IS_GARBAGE_DEFINITION_ENTRY : IS_NOT_GARBAGE_DEFINITION_ENTRY;
+
+            RealHeaderSignalDefinitionEntry headerEntry = new RealHeaderSignalDefinitionEntry();
+            headerEntry.variableIdent = VARIABLE_IDENT + variableCounter++;
+            headerEntry.inputIdent = inputDefinitionEntryForSignal;
+            headerEntry.isConstantStatusStringified = isConstantFlagStringified;
+            headerEntry.isGarbageStatusStringified = isGarbageFlagStringified;
+            headerEntry.outputIdent = outputDefinitionEntryForSignal;
+            headerEntry.bitWidth = signal.width;
+            headerEntry.wasInputPadded = wasInputIdentPadded;
+            realHeaderDefinitions.add(headerEntry);
+        }
+
+        try {
+            // Clear existing file contents or create new file
+            new PrintWriter(exportFilePath.toFile()).close();
+
+            BufferedWriter exportFileWriter = Files.newBufferedWriter(exportFilePath, StandardOpenOption.WRITE, StandardOpenOption.APPEND);
+            exportFileWriter.append("# ").append(module.name);
+            exportFileWriter.newLine();
+            exportFileWriter.append(".version 2.0");
+            exportFileWriter.newLine();
+            exportFileWriter.append(".numvars ").append(String.valueOf(totalBitLengthSumOfUsedModuleSignalLines));
+            exportFileWriter.newLine();
+
+            exportFileWriter.append(".variables " + stringifyRealHeaderSignalDefinitions(realHeaderDefinitions, (entry, bit) -> entry.variableIdent + SIGNAL_IDENT_AND_BIT_DELIMITER + bit, " ", " "));
+            exportFileWriter.newLine();
+            exportFileWriter.append(".inputs " + stringifyRealHeaderSignalDefinitions(realHeaderDefinitions, (entry, bit) -> entry.inputIdent + SIGNAL_IDENT_AND_BIT_DELIMITER + bit, " ", " "));
+            exportFileWriter.newLine();
+            exportFileWriter.append(".constants " + stringifyRealHeaderSignalDefinitions(realHeaderDefinitions, (entry, _) -> entry.isConstantStatusStringified, "", ""));
+            exportFileWriter.newLine();
+            exportFileWriter.append(".outputs " + stringifyRealHeaderSignalDefinitions(realHeaderDefinitions, (entry, bit) -> entry.outputIdent + SIGNAL_IDENT_AND_BIT_DELIMITER + bit, " ", " "));
+            exportFileWriter.newLine();
+            exportFileWriter.append(".garbage " + stringifyRealHeaderSignalDefinitions(realHeaderDefinitions, (entry, _) -> entry.isGarbageStatusStringified, "", ""));
+            exportFileWriter.newLine();
+            exportFileWriter.append(".begin");
+            exportFileWriter.newLine();
+
+            Map<String, String> ioToVariableMappingLookup = realHeaderDefinitions.stream()
+                    .flatMap(entry -> {
+                                if (entry.bitWidth == 1)
+                                    return Stream.of(new AbstractMap.SimpleEntry<String, String>((entry.wasInputPadded ? entry.outputIdent : entry.inputIdent), entry.variableIdent));
+
+                                return IntStream.range(0, entry.bitWidth)
+                                        .mapToObj(bit -> new AbstractMap.SimpleEntry<String, String>(
+                                                (entry.wasInputPadded ? entry.outputIdent : entry.inputIdent) + SIGNAL_IDENT_AND_BIT_DELIMITER + bit,
+                                                entry.variableIdent + SIGNAL_IDENT_AND_BIT_DELIMITER + bit));
+                            }
+                    )
+                    .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
+
             for (Gate gate : gates) {
-                ArrayList<String> controlLines = gate.getControlLines();
-                ArrayList<String> targetLines = gate.getTargetLines();
-                switch (gate.kind) {
-
-                    case Toffoli:
-                        curWriter.append("t");
-                        break;
-                    case Fredkin:
-                        curWriter.append("f");
-                        break;
-                    case Peres:
-                        curWriter.append("p");
-                        break;
-                    case V:
-                        curWriter.append("v");
-                        break;
-                    case Vplus:
-                        curWriter.append("v+");
-                        break;
-                    case Placeholder:
-                        curWriter.append("unimplemented");
-                        System.out.println("Warning, Placeholder Gate was used");
-                        break;
-                }
-                curWriter.append(String.valueOf(controlLines.size() + targetLines.size()));
-                for (String line : controlLines) {
-                    curWriter.append(" ").append(line);
-                }
-                for (String line : targetLines) {
-                    curWriter.append(" ").append(line);
-                }
-                curWriter.newLine();
+                exportFileWriter.append(stringifyGate(gate, ioToVariableMappingLookup));
+                exportFileWriter.newLine();
             }
-            curWriter.append(".end");
-            curWriter.close();
+
+            exportFileWriter.append(".end");
+            exportFileWriter.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
