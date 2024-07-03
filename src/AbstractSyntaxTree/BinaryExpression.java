@@ -69,7 +69,8 @@ public class BinaryExpression extends Expression {
                 if (firstRes.isNumber && secondRes.isNumber) {
                     return new ExpressionResult(firstRes.number + secondRes.number);
                 } else {
-                    SignalExpression plusLines = module.getAdditionalLines(Math.max(firstRes.getWidth(), secondRes.getWidth()));
+                    int numAdditionalLinesRequiredForSynthesis = Math.max(firstRes.getWidth(), secondRes.getWidth()) + 1;
+                    SignalExpression plusLines = module.getAdditionalLines(numAdditionalLinesRequiredForSynthesis);
                     usedLines.addAll(plusLines.getLines());
                     ExpressionResult res = new ExpressionResult(plusLines);
                     res.gates.addAll(firstRes.gates);
@@ -77,11 +78,13 @@ public class BinaryExpression extends Expression {
                     res.gates.addAll(Code.plus(firstRes, secondRes, plusLines));
                     return res;
                 }
+                // TODO:
             case MINUS:
                 if (firstRes.isNumber && secondRes.isNumber) {
                     return new ExpressionResult(firstRes.number - secondRes.number);
                 } else {
-                    SignalExpression minusLines = module.getAdditionalLines(Math.max(firstRes.getWidth(), secondRes.getWidth()));
+                    int numAdditionalLinesRequiredForSynthesis = Math.max(firstRes.getWidth(), secondRes.getWidth()) + 1;
+                    SignalExpression minusLines = module.getAdditionalLines(numAdditionalLinesRequiredForSynthesis);
                     usedLines.addAll(minusLines.getLines());
                     SignalExpression twosComplementLines = null;
                     if (!firstRes.isNumber && !secondRes.isNumber) {

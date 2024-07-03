@@ -22,6 +22,82 @@ import static CodeGen.Gate.Kind.*;
 
 public class Code {
 
+    private static class ThreeBitMajorityGate {
+        public String inCarry;
+        public String inOperandA;
+        public String inOperandB;
+        public String outCarryInXorOperandA;
+        public String outOperandsSum;
+        public String outCarry;
+        public List<Gate> internalGates;
+
+        public ThreeBitMajorityGate(String inCarry, String inOperandA, String inOperandB) {
+            this.inCarry = inCarry;
+            this.inOperandA = inOperandA;
+            this.inOperandB = inOperandB;
+
+            this.outCarryInXorOperandA = this.inCarry;
+            this.outOperandsSum = this.inOperandB;
+            this.outCarry = this.inOperandA;
+
+            Gate operandSumGate = new Gate(Toffoli);
+            operandSumGate.addControlLine(this.inOperandA);
+            operandSumGate.addTargetLine(this.inOperandB);
+
+            Gate operandAAndInCarryGate = new Gate(Toffoli);
+            operandAAndInCarryGate.addControlLine(this.inOperandA);
+            operandAAndInCarryGate.addTargetLine(this.inCarry);
+
+            Gate newCarryGate = new Gate(Toffoli);
+            newCarryGate.addControlLine(this.inCarry);
+            newCarryGate.addControlLine(this.inOperandB);
+            newCarryGate.addTargetLine(this.inOperandA);
+            internalGates = List.of(new Gate[]{ operandSumGate, operandAAndInCarryGate, newCarryGate});
+        }
+    }
+
+    private static class UnmajorityAndSumGate {
+        public String inCarryXorOperandA;
+        public String inOperandsSum;
+        public String inNewCarry;
+
+        public String outCarry;
+        public String outOperandSumAndCarrySum;
+        public String outOperandA;
+        public List<Gate> internalGates;
+
+        public UnmajorityAndSumGate(String inCarryXorOperandA, String inOperandsSum, String inNewCarry){
+            this.inCarryXorOperandA = inCarryXorOperandA;
+            this.inOperandsSum = inOperandsSum;
+            this.inNewCarry = inNewCarry;
+
+            this.outCarry = this.inCarryXorOperandA;
+            this.outOperandSumAndCarrySum = this.inOperandsSum;
+            this.outOperandA = this.inNewCarry;
+
+            Gate originalOperandARecalculationGate = new Gate(Toffoli);
+            originalOperandARecalculationGate.addControlLine(this.inCarryXorOperandA);
+            originalOperandARecalculationGate.addControlLine(this.inOperandsSum);
+            originalOperandARecalculationGate.addTargetLine(this.outOperandA);
+
+            Gate originalCarryRecalculationGate = new Gate(Toffoli);
+            originalCarryRecalculationGate.addControlLine(this.inNewCarry);
+            originalCarryRecalculationGate.addTargetLine(this.outCarry);
+
+            Gate operandSumAndCarrySumGate = new Gate(Toffoli);
+            operandSumAndCarrySumGate.addControlLine(this.outCarry);
+            operandSumAndCarrySumGate.addTargetLine(this.inOperandsSum);
+            internalGates = List.of(new Gate[]{ originalOperandARecalculationGate, originalCarryRecalculationGate, operandSumAndCarrySumGate});
+        }
+
+        public UnmajorityAndSumGate(ThreeBitMajorityGate majorityGate)
+        {
+            this(majorityGate.outCarryInXorOperandA, majorityGate.outOperandsSum, majorityGate.outCarry);
+        }
+    }
+
+
+
     private static class RealHeaderSignalDefinitionEntry {
         public String variableIdent;
         public String inputIdent;
@@ -362,127 +438,11 @@ public class Code {
         return gates;
     }
 
-    public static ArrayList<Gate> plusAssign(SignalExpression signalExp, ExpressionResult res) {
-        ArrayList<Gate> gates = new ArrayList<>();
-        if (res.isNumber) {
-            //both cant be a number because else the result would be handled by the AST
-            int number = res.number;
-            if (number == 0) {
-                //neutral operation, return empty list
-                return gates;
-            }
-            if (number < 0) {
-                //if we add a negative number we can just use minus
-                //because its a number we dont need the twosComplementLine
-                ExpressionResult negative = new ExpressionResult(-number);
-                return minusAssign(signalExp, negative);
-            }
-            ArrayList<Boolean> numBool = intToBool(number);
-            while (numBool.size() < signalExp.getWidth()) {
-                numBool.add(false);
-            }
-            ArrayList<Boolean> numBoolCopy = new ArrayList<>(numBool);
-            //we now have firstExp as arbitrary Expression and a BooleanList for the number
-            //general case, both are lines
-            for (int i = 1; i < numBool.size(); i++) {
-                //xn ^= yn
-                if (numBool.get(i)) {
-                    Gate tempGate = new Gate(Toffoli);
-                    tempGate.addTargetLine(signalExp.getLineName(i));
-                    gates.add(tempGate);
-                }
-            }
-            for (int i = numBool.size() - 1; i > 1; i--) {
-                //yn ^= yn-1 till y2 ^= y1
-                numBool.set(i, numBool.get(i) ^ numBool.get(i - 1));
-            }
-
-            for (int i = numBool.size() - 1; i > 0; i--) {
-                //yn ^= xn-1 & yn-1 and xn ^= yn but we cant write to yn so we do it directly
-                //ax -> a1
-                for (int j = i; j >= 0; j--) {
-                    //bx->b0
-                    if (numBool.get(j)) {
-                        Gate tempGate = new Gate(Toffoli);
-                        tempGate.addTargetLine(signalExp.getLineName(i));
-                        for (int k = i - 1; k >= j; k--) {
-                            tempGate.addControlLine(signalExp.getLineName(k));
-                        }
-                        gates.add(tempGate);
-                    }
-
-                }
-            }
-            for (int i = 0; i < numBoolCopy.size(); i++) {
-                //yn ^= x1n
-                if (numBoolCopy.get(i)) {
-                    Gate tempGate = new Gate(Toffoli);
-                    tempGate.addTargetLine(signalExp.getLineName(i));
-                    gates.add(tempGate);
-                }
-            }
-
-        } else {
-            //general case, both are lines
-            for (int i = 1; i < res.getWidth(); i++) {
-                //xn ^= yn
-                Gate tempGate = new Gate(Toffoli);
-                tempGate.addTargetLine(signalExp.getLineName(i));
-                tempGate.addControlLine(res.getLineName(i));
-                gates.add(tempGate);
-
-            }
-            for (int i = res.getWidth() - 1; i > 1; i--) {
-                //yn ^= yn-1 till y2 ^= y1
-                Gate tempGate = new Gate(Toffoli);
-                tempGate.addTargetLine(res.getLineName(i));
-                tempGate.addControlLine(res.getLineName(i - 1));
-                gates.add(tempGate);
-            }
-            int gatenum;
-            for (gatenum = 1; gatenum < signalExp.getWidth() && gatenum < res.getWidth(); gatenum++) {
-                //yn ^= xn-1 & yn-1
-                Gate tempGate = new Gate(Toffoli);
-                tempGate.addTargetLine(res.getLineName(gatenum));
-                tempGate.addControlLine(signalExp.getLineName(gatenum - 1));
-                tempGate.addControlLine(res.getLineName(gatenum - 1));
-                gates.add(tempGate);
-            }
-            gatenum--;
-            for (int i = gatenum; i > 0; i--) {
-                //xn ^= yn
-                Gate tempGate = new Gate(Toffoli);
-                tempGate.addTargetLine(signalExp.getLineName(i));
-                tempGate.addControlLine(res.getLineName(i));
-                gates.add(tempGate);
-                //reversal of yn ^= xn-1 & yn-1
-                tempGate = new Gate(Toffoli);
-                tempGate.addTargetLine(res.getLineName(gatenum));
-                tempGate.addControlLine(signalExp.getLineName(gatenum - 1));
-                tempGate.addControlLine(res.getLineName(gatenum - 1));
-                gates.add(tempGate);
-            }
-            for (int i = 2; i < res.getWidth(); i++) {
-                //reversal of yn ^= yn-1 till y2 ^= y1
-                Gate tempGate = new Gate(Toffoli);
-                tempGate.addTargetLine(res.getLineName(i));
-                tempGate.addControlLine(res.getLineName(i - 1));
-                gates.add(tempGate);
-            }
-            for (int i = 0; i < res.getWidth(); i++) {
-                //yn ^= x1n
-                Gate tempGate = new Gate(Toffoli);
-                tempGate.addTargetLine(signalExp.getLineName(i));
-                tempGate.addControlLine(res.getLineName(i));
-                gates.add(tempGate);
-
-            }
-        }
-
-        return gates;
+    public static ArrayList<Gate> plusAssign(SignalExpression signalExp, ExpressionResult res, SignalExpression additionalLines) {
+        return internalAddAssign(Optional.of(signalExp), new ExpressionResult(signalExp), res, additionalLines);
     }
 
-    public static ArrayList<Gate> minusAssign(SignalExpression signalExp, ExpressionResult res) {
+    public static ArrayList<Gate> minusAssign(SignalExpression signalExp, ExpressionResult res, SignalExpression additionalLines) {
         ArrayList<Gate> gates = new ArrayList<>();
         if (res.isNumber) {
             int number = res.number;
@@ -493,159 +453,84 @@ public class Code {
             if (number < 0) {
                 //if we substract a negative number we can just use plusAssign
                 ExpressionResult negative = new ExpressionResult(-number);
-                return plusAssign(signalExp, negative);
+                return plusAssign(signalExp, negative, additionalLines);
             }
         }
         //apart from the handling of negative or 0 numbers we can just use plusAssign and reverse the result
-        gates = plusAssign(signalExp, res);
+        gates = plusAssign(signalExp, res, additionalLines);
         Collections.reverse(gates);
         return gates;
     }
 
     public static ArrayList<Gate> plus(ExpressionResult firstExp, ExpressionResult secondExp, SignalExpression additionalLines) {
-        ArrayList<Gate> gates = new ArrayList<>();
-        if (firstExp.isNumber || secondExp.isNumber) {
-            //both cant be a number because else the result would be handled by the AST
-            int number = numberNotRes(firstExp, secondExp);
-            firstExp = resNotNumber(firstExp, secondExp);
-            if (number == 0) {
-                //neutral operation, just copy Exp to lines
-                for (int i = 0; i < firstExp.getWidth(); i++) {
-                    Gate tempGate;
-                    tempGate = new Gate(Toffoli);
-                    tempGate.addTargetLine(additionalLines.getLineName(i));
-                    tempGate.addControlLine(firstExp.getLineName(i));
-                    gates.add(tempGate);
-                }
-                return gates;
-            }
-            if (number < 0) {
-                //if we add a negative number we can just use minus
-                //because its a number we dont need the twosComplementLine
-                ExpressionResult negative = new ExpressionResult(-number);
-                return minus(firstExp, negative, additionalLines, null);
-            }
-            ArrayList<Boolean> numBool = intToBool(number);
-            while (numBool.size() < firstExp.getWidth()) {
-                numBool.add(false);
-            }
-            ArrayList<Boolean> numBoolCopy = new ArrayList<>(numBool);
-            //we now have firstExp as arbitrary Expression and a BooleanList for the number
-            //general case, both are lines
-            for (int i = 0; i < firstExp.getWidth(); i++) {
-                //Write x to additional line
-                Gate tempGate = new Gate(Toffoli);
-                tempGate.addTargetLine(additionalLines.getLineName(i));
-                tempGate.addControlLine(firstExp.getLineName(i));
-                gates.add(tempGate);
+        return internalAddAssign(Optional.empty(), firstExp, secondExp, additionalLines);
+    }
 
-            }
-            for (int i = 1; i < numBool.size(); i++) {
-                //xn ^= yn
-                if (numBool.get(i)) {
-                    Gate tempGate = new Gate(Toffoli);
-                    tempGate.addTargetLine(additionalLines.getLineName(i));
-                    gates.add(tempGate);
-                }
-            }
-            for (int i = numBool.size() - 1; i > 1; i--) {
-                //yn ^= yn-1 till y2 ^= y1
-                numBool.set(i, numBool.get(i) ^ numBool.get(i - 1));
-            }
+    private static ArrayList<Gate> internalAddAssign(Optional<SignalExpression> optionallyAssignedToSignal, ExpressionResult lhsOperand, ExpressionResult rhsOperand, SignalExpression additionalLines) {
+        ArrayList<Gate> synthesizedGates = new ArrayList<>();
+        int expectdOperandsBitwidth = lhsOperand.getWidth();
 
-            for (int i = numBool.size() - 1; i > 0; i--) {
-                //yn ^= xn-1 & yn-1 and xn ^= yn but we cant write to yn so we do it directly
-                //ax -> a1
-                for (int j = i; j >= 0; j--) {
-                    //bx->b0
-                    if (numBool.get(j)) {
-                        Gate tempGate = new Gate(Toffoli);
-                        tempGate.addTargetLine(additionalLines.getLineName(i));
-                        for (int k = i; k >= j; k--) {
-                            tempGate.addControlLine(firstExp.getLineName(k));
-                        }
-                        gates.add(tempGate);
-                    }
+        String inCarryLine = additionalLines.getLineName(0);
+        String[] rhsOperandBackupLines;
+        if (optionallyAssignedToSignal.isEmpty()) {
+            rhsOperandBackupLines = IntStream.range(0, expectdOperandsBitwidth)
+                    .mapToObj(i -> additionalLines.getLineName(i + 1))
+                    .toArray(String[]::new);
 
-                }
-            }
-
-
-            for (int i = 0; i < numBoolCopy.size(); i++) {
-                //yn ^= x1n
-                if (numBoolCopy.get(i)) {
-                    Gate tempGate = new Gate(Toffoli);
-                    tempGate.addTargetLine(additionalLines.getLineName(i));
-                    gates.add(tempGate);
-                }
-            }
-
-        } else {
-            //general case, both are lines
-            for (int i = 0; i < firstExp.getWidth(); i++) {
-                //Write x to additional line
-                Gate tempGate = new Gate(Toffoli);
-                tempGate.addTargetLine(additionalLines.getLineName(i));
-                tempGate.addControlLine(firstExp.getLineName(i));
-                gates.add(tempGate);
-
-            }
-            for (int i = 1; i < secondExp.getWidth(); i++) {
-                //xn ^= yn
-                Gate tempGate = new Gate(Toffoli);
-                tempGate.addTargetLine(additionalLines.getLineName(i));
-                tempGate.addControlLine(secondExp.getLineName(i));
-                gates.add(tempGate);
-
-            }
-            for (int i = secondExp.getWidth() - 1; i > 1; i--) {
-                //yn ^= yn-1 till y2 ^= y1
-                Gate tempGate = new Gate(Toffoli);
-                tempGate.addTargetLine(secondExp.getLineName(i));
-                tempGate.addControlLine(secondExp.getLineName(i - 1));
-                gates.add(tempGate);
-            }
-            for (int i = 1; i < firstExp.getWidth() && i < secondExp.getWidth(); i++) {
-                //yn ^= xn-1 & yn-1
-                Gate tempGate = new Gate(Toffoli);
-                tempGate.addTargetLine(secondExp.getLineName(i));
-                tempGate.addControlLine(additionalLines.getLineName(i - 1));
-                tempGate.addControlLine(secondExp.getLineName(i - 1));
-                gates.add(tempGate);
-            }
-            for (int i = Math.min(firstExp.getWidth(), secondExp.getWidth()) - 1; i > 0; i--) {
-                //xn ^= yn
-                Gate tempGate = new Gate(Toffoli);
-                tempGate.addTargetLine(additionalLines.getLineName(i));
-                tempGate.addControlLine(secondExp.getLineName(i));
-                gates.add(tempGate);
-                //reversal of yn ^= xn-1 & yn-1
-                tempGate = new Gate(Toffoli);
-                tempGate.addTargetLine(secondExp.getLineName(i));
-                tempGate.addControlLine(additionalLines.getLineName(i - 1));
-                tempGate.addControlLine(secondExp.getLineName(i - 1));
-                gates.add(tempGate);
-            }
-            for (int i = 2; i < secondExp.getWidth(); i++) {
-                //reversal of yn ^= yn-1 till y2 ^= y1
-                Gate tempGate = new Gate(Toffoli);
-                tempGate.addTargetLine(secondExp.getLineName(i));
-                tempGate.addControlLine(secondExp.getLineName(i - 1));
-                gates.add(tempGate);
-            }
-            for (int i = 0; i < secondExp.getWidth(); i++) {
-                //yn ^= x1n
-                Gate tempGate = new Gate(Toffoli);
-                tempGate.addTargetLine(additionalLines.getLineName(i));
-                tempGate.addControlLine(secondExp.getLineName(i));
-                gates.add(tempGate);
-
+            for (int i = 0; i < lhsOperand.getWidth(); ++i){
+                Gate backupOfSecondExprBitGate = new Gate(Toffoli);
+                backupOfSecondExprBitGate.addControlLine(rhsOperand.getLineName(i));
+                backupOfSecondExprBitGate.addTargetLine(rhsOperandBackupLines[i]);
+                synthesizedGates.add(backupOfSecondExprBitGate);
             }
         }
 
-        return gates;
+        SignalExpression linesStoringAdditionResult = optionallyAssignedToSignal.orElse(rhsOperand.signal);
+        // If the original lhs operand and the assigned to signal are the same, simply use the original rhs operand as the lhs one since in our synthesis approach the rhs operand will store the result of the addition.
+        ExpressionResult lhsOperandConsideringAssignedToSignal = optionallyAssignedToSignal.isEmpty() ? lhsOperand : rhsOperand;
+
+        ThreeBitMajorityGate[] majorityGates = new ThreeBitMajorityGate[expectdOperandsBitwidth];
+        String rippleCarryMajorityGateInCarryLine = inCarryLine;
+        for (int i = 0; i < expectdOperandsBitwidth; ++i) {
+            majorityGates[i] = new ThreeBitMajorityGate(rippleCarryMajorityGateInCarryLine, lhsOperandConsideringAssignedToSignal.getLineName(i), linesStoringAdditionResult.getLineName(i));
+            synthesizedGates.addAll(majorityGates[i].internalGates);
+            rippleCarryMajorityGateInCarryLine = majorityGates[i].outCarry;
+        }
+
+        int targetedMajorityGate = expectdOperandsBitwidth - 1;
+        int currUnmajorityGateCount = 0;
+        UnmajorityAndSumGate[] unmajorityAndSumGates = new UnmajorityAndSumGate[expectdOperandsBitwidth];
+        unmajorityAndSumGates[currUnmajorityGateCount++] = new UnmajorityAndSumGate(majorityGates[targetedMajorityGate--]);
+        synthesizedGates.addAll(unmajorityAndSumGates[0].internalGates);
+
+        for (int i = targetedMajorityGate; i >= 0; --i) {
+            unmajorityAndSumGates[currUnmajorityGateCount] = new UnmajorityAndSumGate(majorityGates[i]);
+            unmajorityAndSumGates[currUnmajorityGateCount].inNewCarry = unmajorityAndSumGates[i].outCarry;
+            synthesizedGates.addAll(unmajorityAndSumGates[currUnmajorityGateCount].internalGates);
+            ++currUnmajorityGateCount;
+        }
+
+        if (optionallyAssignedToSignal.isEmpty()) {
+            Gate inversionOfInCarryLineGate = new Gate(Toffoli);
+            inversionOfInCarryLineGate.addTargetLine(inCarryLine);
+            synthesizedGates.add(inversionOfInCarryLineGate);
+
+            for (int i = 0; i < expectdOperandsBitwidth; ++i) {
+                Gate secondExprRestoreFromBackupGate = new Gate(Fredkin);
+                secondExprRestoreFromBackupGate.addControlLine(inCarryLine);
+                secondExprRestoreFromBackupGate.addTargetLine(rhsOperand.getLineName(i));
+                secondExprRestoreFromBackupGate.addTargetLine(unmajorityAndSumGates[i].outOperandSumAndCarrySum);
+                synthesizedGates.add(secondExprRestoreFromBackupGate);
+            }
+
+            Gate restoreOfInCarryValueGate = new Gate(Toffoli);
+            restoreOfInCarryValueGate.addTargetLine(inCarryLine);
+            synthesizedGates.add(restoreOfInCarryValueGate);
+        }
+        return synthesizedGates;
     }
 
+    // TODO: Use reverse of addition
     public static ArrayList<Gate> minus(ExpressionResult firstExp, ExpressionResult secondExp, SignalExpression additionalLines, SignalExpression twosComplementLines) {
         //The twosComplementLines is null if one of the numbers is a number
         ArrayList<Gate> gates = new ArrayList<>();

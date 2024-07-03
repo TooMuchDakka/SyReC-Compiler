@@ -33,16 +33,22 @@ public class AssignStatement extends Statement {
         ArrayList<Gate> gates = new ArrayList<>();
         ExpressionResult res = expression.generate(module);
         gates.addAll(res.gates);
+
+
         switch (kind) {
             case XOR:
                 gates.addAll(Code.xorAssign(signalExp, res));
                 break;
-            case PLUS:
-                gates.addAll(Code.plusAssign(signalExp, res));
+            case PLUS: {
+                SignalExpression additionalLinesRequiredForSynthesis = module.getAdditionalLines(1);
+                gates.addAll(Code.plusAssign(signalExp, res, additionalLinesRequiredForSynthesis));
                 break;
-            case MINUS:
-                gates.addAll(Code.minusAssign(signalExp, res));
+            }
+            case MINUS: {
+                SignalExpression additionalLinesRequiredForSynthesis = module.getAdditionalLines(1);
+                gates.addAll(Code.minusAssign(signalExp, res, additionalLinesRequiredForSynthesis));
                 break;
+            }
         }
         if (lineAware) {
             gates.addAll(Code.reverseGates(res.gates));
