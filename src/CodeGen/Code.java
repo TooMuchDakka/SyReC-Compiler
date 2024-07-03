@@ -97,7 +97,7 @@ public class Code {
         return stringifiedGateDefinition.toString();
     }
 
-    public static void endModule(Path exportFilePath, Mod module, CodeMod curMod) {
+    public static void endModule(Path exportFilePath, Mod module, CodeMod curMod, Optional<String> optionalExportResultFilenamePrefix) {
         List<Gate> gates = curMod.generate();
 
         int totalBitLengthSumOfUsedModuleSignalLines = curMod.getVariables().stream().map(variable -> variable.width).reduce(0, Integer::sum);

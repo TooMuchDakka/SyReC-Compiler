@@ -4,6 +4,7 @@ import SymTable.SymTable;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.Set;
     import SymTable.Obj;
     import SymTable.Mod;
@@ -39,7 +40,7 @@ public class Parser {
 	public Scanner scanner;
 	public Errors errors;
 	private String exportLocation;
-	private String inputFileName;
+	private Optional<String> optionalExportResultFilenamePrefix;
 	private Path builtExportResultPath;
 
 	private boolean IsIdentEql(){
@@ -151,6 +152,7 @@ public class Parser {
 
 	public Parser(Scanner scanner) {
 		this.scanner = scanner;
+		this.optionalExportResultFilenamePrefix = Optional.empty();
 		errors = new Errors();
 	}
 
@@ -309,7 +311,7 @@ public class Parser {
 		codeModule.addStatements(statements);
 
 		if (this.builtExportResultPath != null)
-			Code.endModule(this.builtExportResultPath, curMod, codeModule);
+			Code.endModule(this.builtExportResultPath, curMod, codeModule, this.optionalExportResultFilenamePrefix);
 	}
 
 	void ParameterList() {
@@ -863,13 +865,13 @@ public class Parser {
 		return unExp;
 	}
 
-
-
-	public void Parse(String inputFileName, String exportLocation) {
+	public void Parse(String inputFileName, String exportLocation, Optional<String> optionalExportResultFilenamePrefix) {
 		if (inputFileName == null || inputFileName.isEmpty())
 			return;
 
-		this.inputFileName = inputFileName;
+		if (optionalExportResultFilenamePrefix.orElse("") != "")
+			this.optionalExportResultFilenamePrefix = optionalExportResultFilenamePrefix;
+
 		this.exportLocation = exportLocation;
 		this.builtExportResultPath = null;
 
@@ -881,7 +883,7 @@ public class Parser {
 			if (inputFileNameExtensionIndex != -1) {
 				inputFileName = inputFileName.substring(0, inputFileNameExtensionIndex);
 			}
-			this.builtExportResultPath = Path.of(exportLocation, inputFileName + ".real");
+			this.builtExportResultPath = Path.of(exportLocation, this.optionalExportResultFilenamePrefix.orElse("") + inputFileName + ".real");
 		}
 
 		la = new Token();
