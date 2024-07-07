@@ -468,13 +468,16 @@ public class Code {
 
     private static ArrayList<Gate> internalAddAssign(Optional<SignalExpression> optionallyAssignedToSignal, ExpressionResult lhsOperand, ExpressionResult rhsOperand, SignalExpression additionalLines) {
         ArrayList<Gate> synthesizedGates = new ArrayList<>();
-        int expectdOperandsBitwidth = lhsOperand.getWidth();
+        int expectedOperandsBitwidth = lhsOperand.getWidth();
 
-        String inCarryLine = additionalLines.getLineName(0);
+        String inCarryLine = additionalLines.getWidth() == 1
+                ? additionalLines.getLineName(0)
+                : additionalLines.getLineName(expectedOperandsBitwidth);
+
         String[] rhsOperandBackupLines;
         if (optionallyAssignedToSignal.isEmpty()) {
-            rhsOperandBackupLines = IntStream.range(0, expectdOperandsBitwidth)
-                    .mapToObj(i -> additionalLines.getLineName(i + 1))
+            rhsOperandBackupLines = IntStream.range(0, expectedOperandsBitwidth)
+                    .mapToObj(i -> additionalLines.getLineName(i))
                     .toArray(String[]::new);
 
             for (int i = 0; i < lhsOperand.getWidth(); ++i){
@@ -485,21 +488,22 @@ public class Code {
             }
         }
 
+        // Define where temporary addition result is stored (in case of binary expression with '+' operation, result is stored in additional lines instead of rhs operand)
         SignalExpression linesStoringAdditionResult = optionallyAssignedToSignal.orElse(rhsOperand.signal);
         // If the original lhs operand and the assigned to signal are the same, simply use the original rhs operand as the lhs one since in our synthesis approach the rhs operand will store the result of the addition.
         ExpressionResult lhsOperandConsideringAssignedToSignal = optionallyAssignedToSignal.isEmpty() ? lhsOperand : rhsOperand;
 
-        ThreeBitMajorityGate[] majorityGates = new ThreeBitMajorityGate[expectdOperandsBitwidth];
+        ThreeBitMajorityGate[] majorityGates = new ThreeBitMajorityGate[expectedOperandsBitwidth];
         String rippleCarryMajorityGateInCarryLine = inCarryLine;
-        for (int i = 0; i < expectdOperandsBitwidth; ++i) {
+        for (int i = 0; i < expectedOperandsBitwidth; ++i) {
             majorityGates[i] = new ThreeBitMajorityGate(rippleCarryMajorityGateInCarryLine, lhsOperandConsideringAssignedToSignal.getLineName(i), linesStoringAdditionResult.getLineName(i));
             synthesizedGates.addAll(majorityGates[i].internalGates);
             rippleCarryMajorityGateInCarryLine = majorityGates[i].outCarry;
         }
 
-        int targetedMajorityGate = expectdOperandsBitwidth - 1;
+        int targetedMajorityGate = expectedOperandsBitwidth - 1;
         int currUnmajorityGateCount = 0;
-        UnmajorityAndSumGate[] unmajorityAndSumGates = new UnmajorityAndSumGate[expectdOperandsBitwidth];
+        UnmajorityAndSumGate[] unmajorityAndSumGates = new UnmajorityAndSumGate[expectedOperandsBitwidth];
         unmajorityAndSumGates[currUnmajorityGateCount++] = new UnmajorityAndSumGate(majorityGates[targetedMajorityGate--]);
         synthesizedGates.addAll(unmajorityAndSumGates[0].internalGates);
 
@@ -515,11 +519,12 @@ public class Code {
             inversionOfInCarryLineGate.addTargetLine(inCarryLine);
             synthesizedGates.add(inversionOfInCarryLineGate);
 
-            for (int i = 0; i < expectdOperandsBitwidth; ++i) {
+            for (int i = 0; i < expectedOperandsBitwidth; ++i) {
                 Gate secondExprRestoreFromBackupGate = new Gate(Fredkin);
                 secondExprRestoreFromBackupGate.addControlLine(inCarryLine);
-                secondExprRestoreFromBackupGate.addTargetLine(rhsOperand.getLineName(i));
-                secondExprRestoreFromBackupGate.addTargetLine(unmajorityAndSumGates[i].outOperandSumAndCarrySum);
+                // Backup of rhs operand will be built first during synthesize of addition - restore backup of second operand with the help of SWAP gates (swapping lines storing addition result with rhs operand backup lines)
+                secondExprRestoreFromBackupGate.addTargetLine(synthesizedGates.get(i).getTargetLines().getFirst());
+                secondExprRestoreFromBackupGate.addTargetLine(unmajorityAndSumGates[(expectedOperandsBitwidth - i) - 1].outOperandSumAndCarrySum);
                 synthesizedGates.add(secondExprRestoreFromBackupGate);
             }
 

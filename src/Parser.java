@@ -143,8 +143,8 @@ public class Parser {
         		errors.Warning(t.line, t.col, msg);
         	}
 
-        private boolean lineAware = true; //to deactivate line Aware synthesis to save lines
-        private boolean costAware = true; //to deactivate cost Aware synthesis to save gates
+        private boolean lineAware = false; //to deactivate line Aware synthesis to save lines
+        private boolean costAware = false; //to deactivate cost Aware synthesis to save gates
 // If you want your generated compiler case insensitive add the
 // keyword IGNORECASE here.
 
