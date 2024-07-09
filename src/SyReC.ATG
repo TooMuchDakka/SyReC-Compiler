@@ -285,7 +285,7 @@ PRODUCTIONS
                                                      '='] number<out NumberExpression start>                                (.from = start;.)
                                                      "to"] number<out NumberExpression stop>                                (.to = stop;.)
                                                      ["step" ['-'] number<out NumberExpression stepSize>                    (.step = stepSize;.)
-                                                     ] StatementList<.out ArrayList<Statement> statements.>                 (.forStatement = new ForStatement(ident, from, to, step, statements, lineAware);
+                                                     ] "do" StatementList<.out ArrayList<Statement> statements.>            (.forStatement = new ForStatement(ident, from, to, step, statements, lineAware);
                                                                                                                             curMod.removeLoopVar(ident);.)
                                                      "rof".
 

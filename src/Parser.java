@@ -2,7 +2,6 @@
 
 import SymTable.SymTable;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.Set;
@@ -23,11 +22,11 @@ public class Parser {
 	public static final int _to = 3;
 	public static final int _shiftR = 4;
 	public static final int _shiftL = 5;
-	public static final int maxT = 54;
-	public static final int _activateLine = 55;
-	public static final int _deactivateLine = 56;
-	public static final int _activateCost = 57;
-	public static final int _deactivateCost = 58;
+	public static final int maxT = 55;
+	public static final int _activateLine = 56;
+	public static final int _deactivateLine = 57;
+	public static final int _activateCost = 58;
+	public static final int _deactivateCost = 59;
 
 	static final boolean _T = true;
 	static final boolean _x = false;
@@ -136,6 +135,11 @@ public class Parser {
         SymTable tab = new SymTable();
         Mod curMod;
 
+        private String fileName = null;
+        public void setName(String name){
+            fileName = name;
+        }
+
         private HashMap<String, CodeMod> finishedModules = new HashMap<>();
 
 
@@ -143,8 +147,8 @@ public class Parser {
         		errors.Warning(t.line, t.col, msg);
         	}
 
-        private boolean lineAware = false; //to deactivate line Aware synthesis to save lines
-        private boolean costAware = false; //to deactivate cost Aware synthesis to save gates
+        private boolean lineAware = true; //to deactivate line Aware synthesis to save lines
+        private boolean costAware = true; //to deactivate cost Aware synthesis to save gates
 // If you want your generated compiler case insensitive add the
 // keyword IGNORECASE here.
 
@@ -175,16 +179,16 @@ public class Parser {
 				break;
 			}
 
-			if (la.kind == 55) {
+			if (la.kind == 56) {
 				lineAware = true;
 			}
-			if (la.kind == 56) {
+			if (la.kind == 57) {
 				lineAware = false;
 			}
-			if (la.kind == 57) {
+			if (la.kind == 58) {
 				costAware = true;
 			}
-			if (la.kind == 58) {
+			if (la.kind == 59) {
 				costAware = false;
 			}
 			la = t;
@@ -258,7 +262,7 @@ public class Parser {
 				Get();
 			} else if (la.kind == 12) {
 				Get();
-			} else SynErr(55);
+			} else SynErr(56);
 			char calcToggle = t.val.charAt(0);
 			NumberExpression secondNumber = number();
 			switch(calcToggle) {
@@ -279,7 +283,7 @@ public class Parser {
 			 break;
 			}
 			Expect(13);
-		} else SynErr(56);
+		} else SynErr(57);
 		return number;
 	}
 
@@ -306,10 +310,10 @@ public class Parser {
 		}
 		CodeMod codeModule = Code.createModule(curMod);
 		finishedModules.put(curMod.name, codeModule);
-
+		ExpressionResult ifExp = new ExpressionResult(1); //generate alwaysTrue if
+		
 		ArrayList<Statement> statements = StatementList();
 		codeModule.addStatements(statements);
-
 		if (this.builtExportResultPath != null)
 			Code.endModule(this.builtExportResultPath, curMod, codeModule, this.optionalExportResultFilenamePrefix);
 	}
@@ -330,7 +334,7 @@ public class Parser {
 		} else if (la.kind == 20) {
 			Get();
 			kind = Obj.Kind.State;
-		} else SynErr(57);
+		} else SynErr(58);
 		SignalDeclaration(kind);
 		while (la.kind == 15) {
 			Get();
@@ -362,7 +366,7 @@ public class Parser {
 		} else if (la.kind == 18) {
 			Get();
 			kind = Obj.Kind.Inout;
-		} else SynErr(58);
+		} else SynErr(59);
 		SignalDeclaration(kind);
 	}
 
@@ -398,33 +402,33 @@ public class Parser {
 			statement = forStat;
 			break;
 		}
-		case 30: {
+		case 31: {
 			Statement ifStat = IfStatement();
 			statement = ifStat;
 			break;
 		}
-		case 35: case 36: case 37: {
+		case 36: case 37: case 38: {
 			Statement unaryStat = UnaryStatement();
 			statement = unaryStat;
 			break;
 		}
-		case 39: {
+		case 40: {
 			Statement skipStat = SkipStatement();
 			statement = skipStat;
 			break;
 		}
 		case 1: {
 			SignalExpression firstSig = Signal();
-			if (la.kind == 38) {
+			if (la.kind == 39) {
 				Statement swapStat = SwapStatement(firstSig);
 				statement = swapStat;
-			} else if (la.kind == 9 || la.kind == 10 || la.kind == 34) {
+			} else if (la.kind == 9 || la.kind == 10 || la.kind == 35) {
 				Statement assignStat = AssignStatement(firstSig);
 				statement = assignStat;
-			} else SynErr(59);
+			} else SynErr(60);
 			break;
 		}
-		default: SynErr(60); break;
+		default: SynErr(61); break;
 		}
 		return statement;
 	}
@@ -438,7 +442,7 @@ public class Parser {
 		} else if (la.kind == 25) {
 			Get();
 			kind = CallStatement.Kind.UNCALL;
-		} else SynErr(61);
+		} else SynErr(62);
 		Expect(1);
 		Mod calledMod = tab.getModule(t.val);
 		if(calledMod == null) {
@@ -508,22 +512,23 @@ public class Parser {
 			NumberExpression stepSize = number();
 			step = stepSize;
 		}
+		Expect(29);
 		ArrayList<Statement> statements = StatementList();
 		forStatement = new ForStatement(ident, from, to, step, statements, lineAware);
 		curMod.removeLoopVar(ident);
-		Expect(29);
+		Expect(30);
 		return forStatement;
 	}
 
 	Statement  IfStatement() {
 		Statement  ifStatement;
-		Expect(30);
-		Expression ifExp = Expression();
 		Expect(31);
-		ArrayList<Statement> thenStatements = StatementList();
+		Expression ifExp = Expression();
 		Expect(32);
-		ArrayList<Statement> elseStatements = StatementList();
+		ArrayList<Statement> thenStatements = StatementList();
 		Expect(33);
+		ArrayList<Statement> elseStatements = StatementList();
+		Expect(34);
 		Expression fiExp = Expression();
 		ifStatement = new IfStatement(ifExp, thenStatements, elseStatements, fiExp, lineAware);
 		return ifStatement;
@@ -531,13 +536,13 @@ public class Parser {
 
 	Statement  UnaryStatement() {
 		Statement  unary;
-		if (la.kind == 35) {
-			Get();
-		} else if (la.kind == 36) {
+		if (la.kind == 36) {
 			Get();
 		} else if (la.kind == 37) {
 			Get();
-		} else SynErr(62);
+		} else if (la.kind == 38) {
+			Get();
+		} else SynErr(63);
 		String calcToggle = t.val;
 		Expect(27);
 		SignalExpression sig = Signal();
@@ -559,7 +564,7 @@ public class Parser {
 
 	Statement  SkipStatement() {
 		Statement  skip;
-		Expect(39);
+		Expect(40);
 		skip = new SkipStatement(true);
 		return skip;
 	}
@@ -581,13 +586,13 @@ public class Parser {
 			Expression exp = Expression();
 			Expect(22);
 		}
-		if (la.kind == 40) {
+		if (la.kind == 41) {
 			Get();
 			NumberExpression lowerBound = number();
 			startWidth = lowerBound;
 			endWidth = lowerBound; //so far both are equal
 			
-			if (la.kind == 41) {
+			if (la.kind == 42) {
 				Get();
 				NumberExpression upperBound = number();
 				endWidth = upperBound;
@@ -604,7 +609,7 @@ public class Parser {
 
 	Statement  SwapStatement(SignalExpression firstSig) {
 		Statement  swap;
-		Expect(38);
+		Expect(39);
 		SignalExpression secondSig = Signal();
 		if(false/*firstSig.getWidth() != secondSig.getWidth()*/ ){
 		SemErr("Signal Width is not equal");
@@ -618,13 +623,13 @@ public class Parser {
 
 	Statement  AssignStatement(SignalExpression firstSignal) {
 		Statement  assign;
-		if (la.kind == 34) {
+		if (la.kind == 35) {
 			Get();
 		} else if (la.kind == 9) {
 			Get();
 		} else if (la.kind == 10) {
 			Get();
-		} else SynErr(63);
+		} else SynErr(64);
 		String assignToggle = t.val;
 		Expect(27);
 		Expression exp = Expression();
@@ -675,13 +680,13 @@ public class Parser {
 		} else if (IsBinary()) {
 			Expression binExp = BinaryExpression();
 			exp = binExp;
-		} else if (la.kind == 35 || la.kind == 53) {
+		} else if (la.kind == 36 || la.kind == 54) {
 			Expression unExp = UnaryExpression();
 			exp = unExp;
 		} else if (StartOf(1)) {
 			Expression numExp = number();
 			exp = numExp;
-		} else SynErr(64);
+		} else SynErr(65);
 		return exp;
 	}
 
@@ -695,7 +700,7 @@ public class Parser {
 			kind = ShiftExpression.Kind.LEFT;
 		} else if (la.kind == 4) {
 			Get();
-		} else SynErr(65);
+		} else SynErr(66);
 		NumberExpression number = number();
 		shiftExp = new ShiftExpression(exp, number, kind);
 		Expect(13);
@@ -715,7 +720,7 @@ public class Parser {
 			Get();
 			break;
 		}
-		case 34: {
+		case 35: {
 			Get();
 			break;
 		}
@@ -724,10 +729,6 @@ public class Parser {
 			break;
 		}
 		case 12: {
-			Get();
-			break;
-		}
-		case 42: {
 			Get();
 			break;
 		}
@@ -759,11 +760,11 @@ public class Parser {
 			Get();
 			break;
 		}
-		case 27: {
+		case 50: {
 			Get();
 			break;
 		}
-		case 50: {
+		case 27: {
 			Get();
 			break;
 		}
@@ -775,7 +776,11 @@ public class Parser {
 			Get();
 			break;
 		}
-		default: SynErr(66); break;
+		case 53: {
+			Get();
+			break;
+		}
+		default: SynErr(67); break;
 		}
 		String operation = t.val;
 		Expression secondExp = Expression();
@@ -842,12 +847,12 @@ public class Parser {
 	Expression  UnaryExpression() {
 		Expression  unExp;
 		UnaryExpression.Kind kind = UnaryExpression.Kind.LOGICAL;
-		if (la.kind == 53) {
+		if (la.kind == 54) {
 			Get();
-		} else if (la.kind == 35) {
+		} else if (la.kind == 36) {
 			Get();
 			kind = UnaryExpression.Kind.BITWISE;
-		} else SynErr(67);
+		} else SynErr(68);
 		Expression exp = Expression();
 		if(kind == UnaryExpression.Kind.LOGICAL) {
 		 if(exp.getWidth() != 1) {
@@ -865,38 +870,35 @@ public class Parser {
 		return unExp;
 	}
 
-	public void Parse(String inputFileName, String exportLocation, Optional<String> optionalExportResultFilenamePrefix) {
-		if (inputFileName == null || inputFileName.isEmpty())
-			return;
+       public void Parse(String inputFileName, String exportLocation, Optional<String> optionalExportResultFilenamePrefix) {
+		   if (inputFileName == null || inputFileName.isEmpty())
+			   return;
+		   
+		   if (optionalExportResultFilenamePrefix.orElse("") != "")
+			   this.optionalExportResultFilenamePrefix = optionalExportResultFilenamePrefix;
 
-		if (optionalExportResultFilenamePrefix.orElse("") != "")
-			this.optionalExportResultFilenamePrefix = optionalExportResultFilenamePrefix;
+		   this.exportLocation = exportLocation;
+		   this.builtExportResultPath = null;
 
-		this.exportLocation = exportLocation;
-		this.builtExportResultPath = null;
-
-		if (this.exportLocation != null && !this.exportLocation.isEmpty()) {
-			Path inputFilePath = Path.of(inputFileName);
-			inputFileName = inputFilePath.getFileName().toString();
-
-			int inputFileNameExtensionIndex = inputFileName.lastIndexOf('.');
-			if (inputFileNameExtensionIndex != -1) {
-				inputFileName = inputFileName.substring(0, inputFileNameExtensionIndex);
-			}
-			this.builtExportResultPath = Path.of(exportLocation, this.optionalExportResultFilenamePrefix.orElse("") + inputFileName + ".real");
-		}
-
-		la = new Token();
-		la.val = "";		
-		Get();
-		SyReC();
-		Expect(0);
-
-	}
+		   if (this.exportLocation != null && !this.exportLocation.isEmpty()) {
+			   Path inputFilePath = Path.of(inputFileName);
+			   inputFileName = inputFilePath.getFileName().toString();
+			   int inputFileNameExtensionIndex = inputFileName.lastIndexOf('.');
+			   if (inputFileNameExtensionIndex != -1) {
+				   inputFileName = inputFileName.substring(0, inputFileNameExtensionIndex);
+			   }
+			   this.builtExportResultPath = Path.of(exportLocation, this.optionalExportResultFilenamePrefix.orElse("") + inputFileName + ".real");
+		   }
+		   la = new Token();
+		   la.val = "";
+		   Get();
+		   SyReC();
+		   Expect(0);
+	   }
 
 	private static final boolean[][] set = {
-		{_T,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x},
-		{_x,_x,_T,_x, _x,_x,_T,_T, _T,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x}
+		{_T,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x},
+		{_x,_x,_T,_x, _x,_x,_T,_T, _T,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x,_x,_x,_x, _x}
 
 	};
 } // end Parser
@@ -950,45 +952,46 @@ class Errors {
 			case 26: s = "\"for\" expected"; break;
 			case 27: s = "\"=\" expected"; break;
 			case 28: s = "\"step\" expected"; break;
-			case 29: s = "\"rof\" expected"; break;
-			case 30: s = "\"if\" expected"; break;
-			case 31: s = "\"then\" expected"; break;
-			case 32: s = "\"else\" expected"; break;
-			case 33: s = "\"fi\" expected"; break;
-			case 34: s = "\"^\" expected"; break;
-			case 35: s = "\"~\" expected"; break;
-			case 36: s = "\"++\" expected"; break;
-			case 37: s = "\"--\" expected"; break;
-			case 38: s = "\"<=>\" expected"; break;
-			case 39: s = "\"skip\" expected"; break;
-			case 40: s = "\".\" expected"; break;
-			case 41: s = "\":\" expected"; break;
-			case 42: s = "\"%\" expected"; break;
-			case 43: s = "\"*>\" expected"; break;
-			case 44: s = "\"&&\" expected"; break;
-			case 45: s = "\"||\" expected"; break;
-			case 46: s = "\"&\" expected"; break;
-			case 47: s = "\"|\" expected"; break;
-			case 48: s = "\"<\" expected"; break;
-			case 49: s = "\">\" expected"; break;
-			case 50: s = "\"!=\" expected"; break;
-			case 51: s = "\"<=\" expected"; break;
-			case 52: s = "\">=\" expected"; break;
-			case 53: s = "\"!\" expected"; break;
-			case 54: s = "??? expected"; break;
-			case 55: s = "invalid number"; break;
+			case 29: s = "\"do\" expected"; break;
+			case 30: s = "\"rof\" expected"; break;
+			case 31: s = "\"if\" expected"; break;
+			case 32: s = "\"then\" expected"; break;
+			case 33: s = "\"else\" expected"; break;
+			case 34: s = "\"fi\" expected"; break;
+			case 35: s = "\"^\" expected"; break;
+			case 36: s = "\"~\" expected"; break;
+			case 37: s = "\"++\" expected"; break;
+			case 38: s = "\"--\" expected"; break;
+			case 39: s = "\"<=>\" expected"; break;
+			case 40: s = "\"skip\" expected"; break;
+			case 41: s = "\".\" expected"; break;
+			case 42: s = "\":\" expected"; break;
+			case 43: s = "\"%\" expected"; break;
+			case 44: s = "\"*>\" expected"; break;
+			case 45: s = "\"&&\" expected"; break;
+			case 46: s = "\"||\" expected"; break;
+			case 47: s = "\"&\" expected"; break;
+			case 48: s = "\"|\" expected"; break;
+			case 49: s = "\"<\" expected"; break;
+			case 50: s = "\">\" expected"; break;
+			case 51: s = "\"!=\" expected"; break;
+			case 52: s = "\"<=\" expected"; break;
+			case 53: s = "\">=\" expected"; break;
+			case 54: s = "\"!\" expected"; break;
+			case 55: s = "??? expected"; break;
 			case 56: s = "invalid number"; break;
-			case 57: s = "invalid SignalList"; break;
-			case 58: s = "invalid Parameter"; break;
-			case 59: s = "invalid Statement"; break;
+			case 57: s = "invalid number"; break;
+			case 58: s = "invalid SignalList"; break;
+			case 59: s = "invalid Parameter"; break;
 			case 60: s = "invalid Statement"; break;
-			case 61: s = "invalid CallStatement"; break;
-			case 62: s = "invalid UnaryStatement"; break;
-			case 63: s = "invalid AssignStatement"; break;
-			case 64: s = "invalid Expression"; break;
-			case 65: s = "invalid ShiftExpression"; break;
-			case 66: s = "invalid BinaryExpression"; break;
-			case 67: s = "invalid UnaryExpression"; break;
+			case 61: s = "invalid Statement"; break;
+			case 62: s = "invalid CallStatement"; break;
+			case 63: s = "invalid UnaryStatement"; break;
+			case 64: s = "invalid AssignStatement"; break;
+			case 65: s = "invalid Expression"; break;
+			case 66: s = "invalid ShiftExpression"; break;
+			case 67: s = "invalid BinaryExpression"; break;
+			case 68: s = "invalid UnaryExpression"; break;
 			default: s = "error " + n; break;
 		}
 		printMsg(line, col, s);
