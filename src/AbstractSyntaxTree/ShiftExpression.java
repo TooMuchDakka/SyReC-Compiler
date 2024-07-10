@@ -5,6 +5,8 @@ import CodeGen.ExpressionResult;
 import SymTable.Mod;
 
 import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 public class ShiftExpression extends Expression {
 
@@ -34,22 +36,22 @@ public class ShiftExpression extends Expression {
                 if (res.isNumber) {
                     return new ExpressionResult(res.number << numberRes);
                 } else {
-                    SignalExpression shiftLine = module.getAdditionalLines(expression.getWidth());
+                    SignalExpression shiftLine = module.getAdditionalLines(expression.getWidth(module.getLoopVariableRangeDefinitionsLookup()));
                     usedLines.addAll(shiftLine.getLines());
                     ExpressionResult shiftRes = new ExpressionResult(shiftLine);
                     shiftRes.gates.addAll(res.gates);
-                    shiftRes.gates.addAll(Code.leftShift(res, numberRes, shiftLine));
+                    shiftRes.gates.addAll(Code.leftShift(res, numberRes, shiftLine, module.getLoopVariableRangeDefinitionsLookup()));
                     return shiftRes;
                 }
             case RIGHT:
                 if (res.isNumber) {
                     return new ExpressionResult(res.number >> numberRes);
                 } else {
-                    SignalExpression shiftLine = module.getAdditionalLines(expression.getWidth());
+                    SignalExpression shiftLine = module.getAdditionalLines(expression.getWidth(module.getLoopVariableRangeDefinitionsLookup()));
                     usedLines.addAll(shiftLine.getLines());
                     ExpressionResult shiftRes = new ExpressionResult(shiftLine);
                     shiftRes.gates.addAll(res.gates);
-                    shiftRes.gates.addAll(Code.rightShift(res, numberRes, shiftLine));
+                    shiftRes.gates.addAll(Code.rightShift(res, numberRes, shiftLine, module.getLoopVariableRangeDefinitionsLookup()));
                     return shiftRes;
                 }
         }
@@ -57,8 +59,13 @@ public class ShiftExpression extends Expression {
     }
 
     @Override
-    public int getWidth() {
-        return expression.getWidth();
+    public int getWidth(Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup) {
+        return expression.getWidth(loopVariableRangeDefinitionLookup);
+    }
+
+    @Override
+    public Optional<Integer> tryGetWidth(Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup) {
+        return expression.tryGetWidth(loopVariableRangeDefinitionLookup);
     }
 
     @Override

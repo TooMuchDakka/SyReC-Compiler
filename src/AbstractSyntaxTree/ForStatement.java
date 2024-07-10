@@ -35,27 +35,29 @@ public class ForStatement extends Statement {
         } else if (fromInt > toInt && stepInt >= 0) {
             errorStream.println("LoopVar " + ident + " cant reach toValue. From " + fromInt + " to " + toInt + " Stepsize " + stepInt);
         }
-        if (toInt >= fromInt) {
-            for (int i = fromInt; i <= toInt; i += stepInt) {
-                if (ident != null) {
-                    module.setLoopVar(ident, i);
-                }
-                for (Statement statement : statements) {
-                    gates.addAll(statement.generate(module));
-                }
-            }
-        } else {
-            for (int i = fromInt; i >= toInt; i += stepInt) {
-                if (ident != null) {
-                    module.setLoopVar(ident, i);
-                }
-                for (Statement statement : statements) {
-                    gates.addAll(statement.generate(module));
-                }
-            }
+
+        if (stepInt == 0){
+            System.out.println("Loop does not perform any iterations and thus will be not be synthesized");
+            return gates;
         }
+
+        final int numIterations = ((Math.abs(fromInt) - Math.abs(toInt)) / Math.abs(stepInt)) + 1;
         if (ident != null) {
+            module.registerLoopVariable(ident, new LoopVariableRangeDefinition(fromInt, toInt, stepInt));
+
+            for (int i = 0; i < numIterations; ++i) {
+                for (Statement statement : statements)
+                    gates.addAll(statement.generate(module));
+
+                module.advanceLoopVariableValueByOneIterationStep(ident);
+            }
             module.releaseLoopVar(ident);
+        }
+        else {
+            for (int i = 0; i < numIterations; ++i) {
+                for (Statement statement : statements)
+                    gates.addAll(statement.generate(module));
+            }
         }
         return gates;
     }

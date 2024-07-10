@@ -5,6 +5,8 @@ import CodeGen.ExpressionResult;
 import SymTable.Mod;
 
 import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 public class UnaryExpression extends Expression {
 
@@ -39,18 +41,18 @@ public class UnaryExpression extends Expression {
                     usedLines.addAll(notLine.getLines());
                     ExpressionResult notRes = new ExpressionResult(notLine);
                     notRes.gates.addAll(res.gates);
-                    notRes.gates.addAll(Code.notExp(res, notLine));
+                    notRes.gates.addAll(Code.notExp(res, notLine, module.getLoopVariableRangeDefinitionsLookup()));
                     return notRes;
                 }
             case BITWISE:
                 if (res.isNumber) {
                     return new ExpressionResult(~res.number);
                 } else {
-                    SignalExpression notLine = module.getAdditionalLines(res.getWidth());
+                    SignalExpression notLine = module.getAdditionalLines(res.getWidth(module.getLoopVariableRangeDefinitionsLookup()));
                     usedLines.addAll(notLine.getLines());
                     ExpressionResult notRes = new ExpressionResult(notLine);
                     notRes.gates.addAll(res.gates);
-                    notRes.gates.addAll(Code.notExp(res, notLine));
+                    notRes.gates.addAll(Code.notExp(res, notLine, module.getLoopVariableRangeDefinitionsLookup()));
                     return notRes;
                 }
         }
@@ -58,10 +60,17 @@ public class UnaryExpression extends Expression {
     }
 
     @Override
-    public int getWidth() {
-        if (kind == Kind.LOGICAL) {
+    public int getWidth(Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup) {
+        if (kind == Kind.LOGICAL)
             return 1;
-        } else return expression.getWidth();
+        return expression.getWidth(loopVariableRangeDefinitionLookup);
+    }
+
+    @Override
+    public Optional<Integer> tryGetWidth(Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup) {
+        if (kind == Kind.LOGICAL)
+            return Optional.of(1);
+        return expression.tryGetWidth(loopVariableRangeDefinitionLookup);
     }
 
     @Override

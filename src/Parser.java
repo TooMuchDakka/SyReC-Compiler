@@ -3,16 +3,13 @@
 import SymTable.SymTable;
 
 import java.nio.file.Path;
-import java.util.Optional;
-import java.util.Set;
-    import SymTable.Obj;
+import java.util.*;
+
+import SymTable.Obj;
     import SymTable.Mod;
     import CodeGen.Code;
     import CodeGen.ExpressionResult;
     import AbstractSyntaxTree.*;
-    import java.util.ArrayList;
-    import java.util.HashMap;
-
 
 
 public class Parser {
@@ -38,9 +35,48 @@ public class Parser {
 	
 	public Scanner scanner;
 	public Errors errors;
+
+	private String fileName;
 	private String exportLocation;
 	private Optional<String> optionalExportResultFilenamePrefix;
 	private Path builtExportResultPath;
+
+	private boolean lineAware = true; //to deactivate line Aware synthesis to save lines
+	private boolean costAware = true; //to deactivate cost Aware synthesis to save gates
+
+	private Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup;
+	private Map<String, CodeMod> finishedModules;
+
+	public Parser(Scanner scanner) {
+		this.scanner = scanner;
+		this.optionalExportResultFilenamePrefix = Optional.empty();
+
+		this.finishedModules = new HashMap<>();
+		this.loopVariableRangeDefinitionLookup = new HashMap<>();
+
+		errors = new Errors();
+	}
+	public void setName(String name){
+		fileName = name;
+	}
+
+	private void SynErr (int n) {
+		if (errDist >= minErrDist)
+			errors.SynErr(la.line, la.col, n);
+
+		errDist = 0;
+	}
+
+	private void SemErr (String msg) {
+		if (errDist >= minErrDist)
+			errors.SemErr(t.line, t.col, msg);
+
+		errDist = 0;
+	}
+
+	private void Warning (String msg) { //add Warning as function to not need to specify line and col
+		errors.Warning(t.line, t.col, msg);
+	}
 
 	private boolean IsIdentEql(){
         scanner.ResetPeek();
@@ -135,41 +171,6 @@ public class Parser {
         SymTable tab = new SymTable();
         Mod curMod;
 
-        private String fileName = null;
-        public void setName(String name){
-            fileName = name;
-        }
-
-        private HashMap<String, CodeMod> finishedModules = new HashMap<>();
-
-
-        private void Warning (String msg) { //add Warning as function to not need to specify line and col
-        		errors.Warning(t.line, t.col, msg);
-        	}
-
-        private boolean lineAware = true; //to deactivate line Aware synthesis to save lines
-        private boolean costAware = true; //to deactivate cost Aware synthesis to save gates
-// If you want your generated compiler case insensitive add the
-// keyword IGNORECASE here.
-
-
-
-	public Parser(Scanner scanner) {
-		this.scanner = scanner;
-		this.optionalExportResultFilenamePrefix = Optional.empty();
-		errors = new Errors();
-	}
-
-	void SynErr (int n) {
-		if (errDist >= minErrDist) errors.SynErr(la.line, la.col, n);
-		errDist = 0;
-	}
-
-	public void SemErr (String msg) {
-		if (errDist >= minErrDist) errors.SemErr(t.line, t.col, msg);
-		errDist = 0;
-	}
-	
 	void Get () {
 		for (;;) {
 			t = la;
@@ -611,7 +612,7 @@ public class Parser {
 		Statement  swap;
 		Expect(39);
 		SignalExpression secondSig = Signal();
-		if(false/*firstSig.getWidth() != secondSig.getWidth()*/ ){
+		if(false/*firstSig.getWidth(loopVariableRangeDefinitionLookup) != secondSig.getWidth(loopVariableRangeDefinitionLookup)*/ ){
 		SemErr("Signal Width is not equal");
 		swap =  new SkipStatement(true);
 		}
@@ -640,12 +641,15 @@ public class Parser {
 			break;
 		 }
 		}
+
+		Optional<Integer> assignedToSignalBitwidth = firstSignal.tryGetWidth(this.loopVariableRangeDefinitionLookup);
+		Optional<Integer> assignmentRhsOperandExprBitwidth = exp.tryGetWidth(this.loopVariableRangeDefinitionLookup);
 		if(cantAssign) {
 		 SemErr("Signal is contained in the Expression of the assign Statement");
 		 assign = new SkipStatement(true);
 		}
 		//TODO check if you can fit smaller numbers into signal
-		else if(firstSignal.getWidth() < exp.getWidth()) {
+		else if(assignedToSignalBitwidth.isPresent() && assignmentRhsOperandExprBitwidth.isPresent() && assignedToSignalBitwidth.get() < assignmentRhsOperandExprBitwidth.get()) {
 		 SemErr("Expression doesnt fit into the Signal Width");
 		 assign = new SkipStatement(true);
 		}
@@ -855,14 +859,14 @@ public class Parser {
 		} else SynErr(68);
 		Expression exp = Expression();
 		if(kind == UnaryExpression.Kind.LOGICAL) {
-		 if(exp.getWidth() != 1) {
-		 //TODO width of BITWIDTH cant be dynamically checked during parse
-		     SemErr("Logical Not on a Busline or an Expression that is not a boolean");
-		     unExp = new NumberExpression(0);
-		 }
-		 else {
-		     unExp = new UnaryExpression(exp, kind);
-		 }
+			Optional<Integer> exprBitwidth = exp.tryGetWidth(this.loopVariableRangeDefinitionLookup);
+			if (exprBitwidth.isPresent() && exprBitwidth.get() != 1) {
+				//TODO width of BITWIDTH cant be dynamically checked during parse
+				SemErr("Logical Not on a Busline or an Expression that is not a boolean");
+				unExp = new NumberExpression(0);
+			} else {
+				unExp = new UnaryExpression(exp, kind);
+			}
 		}
 		else {
 		 unExp = new UnaryExpression(exp, kind);
@@ -873,7 +877,7 @@ public class Parser {
        public void Parse(String inputFileName, String exportLocation, Optional<String> optionalExportResultFilenamePrefix) {
 		   if (inputFileName == null || inputFileName.isEmpty())
 			   return;
-		   
+
 		   if (optionalExportResultFilenamePrefix.orElse("") != "")
 			   this.optionalExportResultFilenamePrefix = optionalExportResultFilenamePrefix;
 

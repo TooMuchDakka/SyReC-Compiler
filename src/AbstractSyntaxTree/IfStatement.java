@@ -37,7 +37,7 @@ public class IfStatement extends Statement {
         } else {
             //saves the ifExpression to a new line and reverses the calculation to reset all possible additional Lines
             ifRes = new ExpressionResult(module.getAdditionalLines(1));
-            gates.addAll(Code.xorAssign(ifRes.signal, ifExp));
+            gates.addAll(Code.xorAssign(ifRes.signal, ifExp, module.getLoopVariableRangeDefinitionsLookup()));
             if (lineAware) {
                 gates.addAll(Code.reverseGates(ifExp.gates));
                 ifExpression.resetLines(module);
@@ -76,7 +76,7 @@ public class IfStatement extends Statement {
         if (!ifRes.isNumber) {
             ExpressionResult fiRes = fiExpression.generate(module);
             gates.addAll(new ArrayList<Gate>(fiRes.gates));
-            gates.addAll(Code.xorAssign(ifRes.signal, fiRes));
+            gates.addAll(Code.xorAssign(ifRes.signal, fiRes, module.getLoopVariableRangeDefinitionsLookup()));
             if (lineAware) {
                 gates.addAll(Code.reverseGates(fiRes.gates));
                 fiExpression.resetLines(module);

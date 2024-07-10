@@ -5,6 +5,8 @@ import CodeGen.ExpressionResult;
 import SymTable.Mod;
 
 import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 public class BinaryExpression extends Expression {
 
@@ -26,7 +28,7 @@ public class BinaryExpression extends Expression {
     }
 
     @Override
-    public int getWidth() {
+    public int getWidth(Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup) {
         switch (kind) {
             case PLUS:
             case MINUS:
@@ -38,7 +40,7 @@ public class BinaryExpression extends Expression {
             case BIT_AND:
             case BIT_OR:
                 //TODO once generate of these are implemented this could change
-                return Math.max(firstExpression.getWidth(), secondExpression.getWidth());
+                return Math.max(firstExpression.getWidth(loopVariableRangeDefinitionLookup), secondExpression.getWidth(loopVariableRangeDefinitionLookup));
             case LOG_AND:
             case LOG_OR:
             case LESSER:
@@ -50,6 +52,36 @@ public class BinaryExpression extends Expression {
                 return 1;   //logical Expressions always return a width of 1
         }
         return -1;
+    }
+
+    @Override
+    public Optional<Integer> tryGetWidth(Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup) {
+        switch (kind) {
+            case PLUS:
+            case MINUS:
+            case BIT_XOR:
+            case TIMES_UPPER:
+            case DIVIDE:
+            case REMAINDER:
+            case TIMES_LOWER:
+            case BIT_AND:
+            case BIT_OR:
+                Optional<Integer> optionalLhsOperandBitwidth = firstExpression.tryGetWidth(loopVariableRangeDefinitionLookup);
+                Optional<Integer> optionalRhsOperandBitwidth = secondExpression.tryGetWidth(loopVariableRangeDefinitionLookup);
+                if (optionalLhsOperandBitwidth.isPresent() && optionalRhsOperandBitwidth.isPresent())
+                    return Optional.of(Math.max(optionalLhsOperandBitwidth.get(), optionalRhsOperandBitwidth.get()));
+                return Optional.empty();
+            case LOG_AND:
+            case LOG_OR:
+            case LESSER:
+            case GREATER:
+            case EQL:
+            case NEQL:
+            case LEQL:
+            case GEQL:
+                return Optional.of(1);   //logical Expressions always return a width of 1
+        }
+        return Optional.empty();
     }
 
     @Override
@@ -69,13 +101,13 @@ public class BinaryExpression extends Expression {
                 if (firstRes.isNumber && secondRes.isNumber) {
                     return new ExpressionResult(firstRes.number + secondRes.number);
                 } else {
-                    int numAdditionalLinesRequiredForSynthesis = Math.max(firstRes.getWidth(), secondRes.getWidth()) + 1;
+                    int numAdditionalLinesRequiredForSynthesis = Math.max(firstRes.getWidth(module.getLoopVariableRangeDefinitionsLookup()), secondRes.getWidth(module.getLoopVariableRangeDefinitionsLookup())) + 1;
                     SignalExpression plusLines = module.getAdditionalLines(numAdditionalLinesRequiredForSynthesis);
                     usedLines.addAll(plusLines.getLines());
                     ExpressionResult res = new ExpressionResult(plusLines);
                     res.gates.addAll(firstRes.gates);
                     res.gates.addAll(secondRes.gates);
-                    res.gates.addAll(Code.plus(firstRes, secondRes, plusLines));
+                    res.gates.addAll(Code.plus(firstRes, secondRes, plusLines, module.getLoopVariableRangeDefinitionsLookup()));
                     return res;
                 }
                 // TODO:
@@ -83,31 +115,31 @@ public class BinaryExpression extends Expression {
                 if (firstRes.isNumber && secondRes.isNumber) {
                     return new ExpressionResult(firstRes.number - secondRes.number);
                 } else {
-                    int numAdditionalLinesRequiredForSynthesis = Math.max(firstRes.getWidth(), secondRes.getWidth()) + 1;
+                    int numAdditionalLinesRequiredForSynthesis = Math.max(firstRes.getWidth(module.getLoopVariableRangeDefinitionsLookup()), secondRes.getWidth(module.getLoopVariableRangeDefinitionsLookup())) + 1;
                     SignalExpression minusLines = module.getAdditionalLines(numAdditionalLinesRequiredForSynthesis);
                     usedLines.addAll(minusLines.getLines());
                     SignalExpression twosComplementLines = null;
                     if (!firstRes.isNumber && !secondRes.isNumber) {
                         //only generate a line for the twos complement if both expressions are no number
-                        twosComplementLines = module.getAdditionalLines(minusLines.getWidth());
+                        twosComplementLines = module.getAdditionalLines(minusLines.getWidth(module.getLoopVariableRangeDefinitionsLookup()));
                         usedLines.addAll(twosComplementLines.getLines());
                     }
                     ExpressionResult res = new ExpressionResult(minusLines);
                     res.gates.addAll(firstRes.gates);
                     res.gates.addAll(secondRes.gates);
-                    res.gates.addAll(Code.minus(firstRes, secondRes, minusLines, twosComplementLines));
+                    res.gates.addAll(Code.minus(firstRes, secondRes, minusLines, twosComplementLines, module.getLoopVariableRangeDefinitionsLookup()));
                     return res;
                 }
             case BIT_XOR:
                 if (firstRes.isNumber && secondRes.isNumber) {
                     return new ExpressionResult(firstRes.number ^ secondRes.number);
                 } else {
-                    SignalExpression xorLines = module.getAdditionalLines(Math.max(firstRes.getWidth(), secondRes.getWidth()));
+                    SignalExpression xorLines = module.getAdditionalLines(Math.max(firstRes.getWidth(module.getLoopVariableRangeDefinitionsLookup()), secondRes.getWidth(module.getLoopVariableRangeDefinitionsLookup())));
                     usedLines.addAll(xorLines.getLines());
                     ExpressionResult res = new ExpressionResult(xorLines);
                     res.gates.addAll(firstRes.gates);
                     res.gates.addAll(secondRes.gates);
-                    res.gates.addAll(Code.xor(firstRes, secondRes, xorLines));
+                    res.gates.addAll(Code.xor(firstRes, secondRes, xorLines, module.getLoopVariableRangeDefinitionsLookup()));
                     return res;
                 }
             case TIMES_UPPER:
@@ -156,7 +188,7 @@ public class BinaryExpression extends Expression {
                     ExpressionResult res = new ExpressionResult(andLine);
                     res.gates.addAll(firstRes.gates);
                     res.gates.addAll(secondRes.gates);
-                    res.gates.addAll(Code.logicalAnd(firstRes, secondRes, andLine));
+                    res.gates.addAll(Code.logicalAnd(firstRes, secondRes, andLine, module.getLoopVariableRangeDefinitionsLookup()));
                     return res;
                 }
 
@@ -182,7 +214,7 @@ public class BinaryExpression extends Expression {
                     ExpressionResult res = new ExpressionResult(orLine);
                     res.gates.addAll(firstRes.gates);
                     res.gates.addAll(secondRes.gates);
-                    res.gates.addAll(Code.logicalOr(firstRes, secondRes, orLine));
+                    res.gates.addAll(Code.logicalOr(firstRes, secondRes, orLine, module.getLoopVariableRangeDefinitionsLookup()));
                     return res;
                 }
 
@@ -190,12 +222,12 @@ public class BinaryExpression extends Expression {
                 if (firstRes.isNumber && secondRes.isNumber) {
                     return new ExpressionResult(firstRes.number & secondRes.number);
                 } else {
-                    SignalExpression bitAndLines = module.getAdditionalLines(Math.max(firstRes.getWidth(), secondRes.getWidth()));
+                    SignalExpression bitAndLines = module.getAdditionalLines(Math.max(firstRes.getWidth(module.getLoopVariableRangeDefinitionsLookup()), secondRes.getWidth(module.getLoopVariableRangeDefinitionsLookup())));
                     usedLines.addAll(bitAndLines.getLines());
                     ExpressionResult res = new ExpressionResult(bitAndLines);
                     res.gates.addAll(firstRes.gates);
                     res.gates.addAll(secondRes.gates);
-                    res.gates.addAll(Code.bitwiseAnd(firstRes, secondRes, bitAndLines));
+                    res.gates.addAll(Code.bitwiseAnd(firstRes, secondRes, bitAndLines, module.getLoopVariableRangeDefinitionsLookup()));
                     return res;
                 }
             case BIT_OR:

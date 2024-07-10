@@ -37,16 +37,16 @@ public class AssignStatement extends Statement {
 
         switch (kind) {
             case XOR:
-                gates.addAll(Code.xorAssign(signalExp, res));
+                gates.addAll(Code.xorAssign(signalExp, res, module.getLoopVariableRangeDefinitionsLookup()));
                 break;
             case PLUS: {
                 SignalExpression additionalLinesRequiredForSynthesis = module.getAdditionalLines(1);
-                gates.addAll(Code.plusAssign(signalExp, res, additionalLinesRequiredForSynthesis));
+                gates.addAll(Code.plusAssign(signalExp, res, additionalLinesRequiredForSynthesis, module.getLoopVariableRangeDefinitionsLookup()));
                 break;
             }
             case MINUS: {
                 SignalExpression additionalLinesRequiredForSynthesis = module.getAdditionalLines(1);
-                gates.addAll(Code.minusAssign(signalExp, res, additionalLinesRequiredForSynthesis));
+                gates.addAll(Code.minusAssign(signalExp, res, additionalLinesRequiredForSynthesis, module.getLoopVariableRangeDefinitionsLookup()));
                 break;
             }
         }

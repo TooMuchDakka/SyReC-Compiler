@@ -3,25 +3,28 @@ package AbstractSyntaxTree;
 import CodeGen.Gate;
 import SymTable.Obj;
 
+import javax.management.openmbean.KeyAlreadyExistsException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 
 public class CodeMod {
     //A Dataobject to hold the Code representation of a module
     private final String name;
-    private final HashMap<String, Obj> variables;   //the variables defined in the source code
-    private final HashMap<String, Obj> additionalLines; //the lines that get created internally by expressions
+    private final Map<String, Obj> variables;   //the variables defined in the source code
+    private final Map<String, Obj> additionalLines; //the lines that get created internally by expressions
     private final ArrayList<Obj> zeroLines; //additionalLines that are guaranteed zero
     private int addLineCounter = 0; //used to number the additional lines
     private final ArrayList<Statement> statements;
-    private final HashMap<String, Integer> loopVars; //keeps track of the loopVars
+    private final Map<String, LoopVariableRangeDefinition> loopVars; //keeps track of the loopVars
 
     public CodeMod(String name, HashMap<String, Obj> variables) {
         this.name = name;
         this.variables = new HashMap<>(variables);
-        additionalLines = new HashMap<String, Obj>();
-        zeroLines = new ArrayList<Obj>();
-        statements = new ArrayList<Statement>();
+        additionalLines = new HashMap<>();
+        zeroLines = new ArrayList<>();
+        statements = new ArrayList<>();
         loopVars = new HashMap<>();
     }
 
@@ -90,25 +93,39 @@ public class CodeMod {
         return count;
     }
 
-    public Integer getLoopVar(String ident) {
-        return loopVars.get(ident);
+    public Integer getCurrentLoopVariableValue(String ident) {
+        return loopVars.get(ident).currentValue;
     }
 
     public int getVarWidth(String ident) {
         return variables.get(ident).width;
     }
 
-    public void setLoopVar(String ident, int value) {
-        loopVars.put(ident, value);
+    public void registerLoopVariable(String ident, LoopVariableRangeDefinition valueRange) {
+        if (loopVars.containsKey(ident))
+            throw new KeyAlreadyExistsException();
+
+        loopVars.put(ident, valueRange);
+    }
+
+    public void advanceLoopVariableValueByOneIterationStep(String ident) {
+        if (!loopVars.containsKey(ident))
+            return;
+
+        LoopVariableRangeDefinition currentValue = loopVars.get(ident);
+        currentValue.currentValue += currentValue.stepSize;
+        loopVars.put(ident, currentValue);
     }
 
     public void releaseLoopVar(String ident) {
         loopVars.remove(ident);
     }
 
+    public Map<String, LoopVariableRangeDefinition> getLoopVariableRangeDefinitionsLookup(){
+        return Collections.unmodifiableMap(loopVars);
+    }
+
     public void addVariable(Obj variable) {
         variables.put(variable.name, variable);
     }
-
-
 }

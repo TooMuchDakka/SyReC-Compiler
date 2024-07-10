@@ -4,6 +4,8 @@ import CodeGen.ExpressionResult;
 import SymTable.Mod;
 
 import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 public class NumberExpression extends Expression {
 
@@ -49,10 +51,10 @@ public class NumberExpression extends Expression {
             case BITWIDTH:
                 return new ExpressionResult(module.getVarWidth(ident));
             case LOOPVAR:
-                if (module == null || module.getLoopVar(ident) == null) {
+                if (module == null || module.getCurrentLoopVariableValue(ident) == null) {
                     return new ExpressionResult(-1);
                 }
-                return new ExpressionResult(module.getLoopVar(ident));
+                return new ExpressionResult(module.getCurrentLoopVariableValue(ident));
             case PLUS:
                 return new ExpressionResult(firstNum.generate(module).number + secondNum.generate(module).number);
             case MINUS:
@@ -66,8 +68,34 @@ public class NumberExpression extends Expression {
     }
 
     @Override
-    public int getWidth() {
+    public int getWidth(Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup) {
         return 0; //TODO change this to log2(int)?
+    }
+
+    @Override
+    public Optional<Integer> tryGetWidth(Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup) {
+        return Optional.empty();    // TODO:
+    }
+
+    public int evaluate(Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup){
+        switch (kind) {
+            case INT:
+                return num;
+            case LOOPVAR:
+                if (!loopVariableRangeDefinitionLookup.containsKey(ident))
+                    throw new UnsupportedOperationException("Could not determine value of loop variable " + ident + " during evaluation of number expression");
+                return loopVariableRangeDefinitionLookup.get(ident).currentValue;
+            case PLUS:
+                return firstNum.evaluate(loopVariableRangeDefinitionLookup) + secondNum.evaluate(loopVariableRangeDefinitionLookup);
+            case MINUS:
+                return firstNum.evaluate(loopVariableRangeDefinitionLookup) - secondNum.evaluate(loopVariableRangeDefinitionLookup);
+            case TIMES:
+                return firstNum.evaluate(loopVariableRangeDefinitionLookup) * secondNum.evaluate(loopVariableRangeDefinitionLookup);
+            case DIVIDE:
+                return firstNum.evaluate(loopVariableRangeDefinitionLookup) / secondNum.evaluate(loopVariableRangeDefinitionLookup);
+            default:
+                throw new UnsupportedOperationException("Could not determine value of number expression of kind " + kind);
+        }
     }
 
     @Override

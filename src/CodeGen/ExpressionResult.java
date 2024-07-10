@@ -1,8 +1,10 @@
 package CodeGen;
 
+import AbstractSyntaxTree.LoopVariableRangeDefinition;
 import AbstractSyntaxTree.SignalExpression;
 
 import java.util.ArrayList;
+import java.util.Map;
 
 public class ExpressionResult {
     //a Expression can either return a number or a Signal
@@ -37,9 +39,9 @@ public class ExpressionResult {
     }
 
 
-    public int getWidth() {
+    public int getWidth(Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup) {
         if (!isNumber) {
-            return signal.getWidth();
+            return signal.getWidth(loopVariableRangeDefinitionLookup);
         } else {
             return (int) Math.ceil(Math.log(number) / Math.log(2));
         }

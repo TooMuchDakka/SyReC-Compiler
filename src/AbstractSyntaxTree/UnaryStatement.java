@@ -29,11 +29,11 @@ public class UnaryStatement extends Statement {
         signalExp.generate(module);
         switch (kind) {
             case NEGATE:
-                return Code.not(signalExp);
+                return Code.not(signalExp, module.getLoopVariableRangeDefinitionsLookup());
             case INCREMENT:
-                return Code.increment(signalExp);
+                return Code.increment(signalExp, module.getLoopVariableRangeDefinitionsLookup());
             case DECREMENT:
-                return Code.decrement(signalExp);
+                return Code.decrement(signalExp, module.getLoopVariableRangeDefinitionsLookup());
         }
         return null;
     }

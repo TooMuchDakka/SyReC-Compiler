@@ -22,7 +22,7 @@ public class SwapStatement extends Statement {
     public ArrayList<Gate> generate(CodeMod module) {
         firstSignal.generate(module);
         secondSignal.generate(module);
-        return Code.swap(firstSignal, secondSignal);
+        return Code.swap(firstSignal, secondSignal, module.getLoopVariableRangeDefinitionsLookup());
     }
 
     @Override

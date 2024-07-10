@@ -3,9 +3,7 @@ package AbstractSyntaxTree;
 import CodeGen.ExpressionResult;
 import SymTable.Mod;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.*;
 
 public abstract class Expression {
 
@@ -19,7 +17,9 @@ public abstract class Expression {
 
     public abstract ExpressionResult generate(CodeMod module);
 
-    public abstract int getWidth();
+    public abstract int getWidth(Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup);
+
+    public abstract Optional<Integer> tryGetWidth(Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup);
 
     public void resetLines(CodeMod module) {
         for (String lineName : usedLines) {
