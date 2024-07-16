@@ -30,32 +30,32 @@ public class ShiftExpression extends Expression {
     public ExpressionResult generate(CodeMod module) {
         ExpressionResult res = expression.generate(module);
         usedLines.addAll(expression.usedLines);
+
+        final int toBeShiftedExpressionBitwidth = expression.getWidth(module.getLoopVariableRangeDefinitionsLookup());
         int numberRes = number.generate(module).number;
+
+        if (res.isNumber)
+            return new ExpressionResult(kind == Kind.LEFT ? (res.number << numberRes) : (res.number >> numberRes));
+
+        if (numberRes == toBeShiftedExpressionBitwidth)
+            return new ExpressionResult(0);
+
+        SignalExpression shiftLine = module.getAdditionalLines(toBeShiftedExpressionBitwidth);
+        usedLines.addAll(shiftLine.getLines());
+        ExpressionResult shiftRes = new ExpressionResult(shiftLine);
+        shiftRes.gates.addAll(res.gates);
+
         switch (kind) {
             case LEFT:
-                if (res.isNumber) {
-                    return new ExpressionResult(res.number << numberRes);
-                } else {
-                    SignalExpression shiftLine = module.getAdditionalLines(expression.getWidth(module.getLoopVariableRangeDefinitionsLookup()));
-                    usedLines.addAll(shiftLine.getLines());
-                    ExpressionResult shiftRes = new ExpressionResult(shiftLine);
-                    shiftRes.gates.addAll(res.gates);
-                    shiftRes.gates.addAll(Code.leftShift(res, numberRes, shiftLine, module.getLoopVariableRangeDefinitionsLookup()));
-                    return shiftRes;
-                }
+                shiftRes.gates.addAll(Code.leftShift(res, numberRes, shiftLine, module.getLoopVariableRangeDefinitionsLookup()));
+                break;
             case RIGHT:
-                if (res.isNumber) {
-                    return new ExpressionResult(res.number >> numberRes);
-                } else {
-                    SignalExpression shiftLine = module.getAdditionalLines(expression.getWidth(module.getLoopVariableRangeDefinitionsLookup()));
-                    usedLines.addAll(shiftLine.getLines());
-                    ExpressionResult shiftRes = new ExpressionResult(shiftLine);
-                    shiftRes.gates.addAll(res.gates);
-                    shiftRes.gates.addAll(Code.rightShift(res, numberRes, shiftLine, module.getLoopVariableRangeDefinitionsLookup()));
-                    return shiftRes;
-                }
+                shiftRes.gates.addAll(Code.rightShift(res, numberRes, shiftLine, module.getLoopVariableRangeDefinitionsLookup()));
+                break;
+            default:
+                return new ExpressionResult(0);
         }
-        return new ExpressionResult(0);
+        return shiftRes;
     }
 
     @Override

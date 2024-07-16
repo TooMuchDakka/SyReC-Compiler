@@ -41,7 +41,7 @@ public class ForStatement extends Statement {
             return gates;
         }
 
-        final int numIterations = ((Math.abs(fromInt) - Math.abs(toInt)) / Math.abs(stepInt)) + 1;
+        final int numIterations = (Math.abs((Math.abs(fromInt) - Math.abs(toInt))) / Math.abs(stepInt)) + 1;
         if (ident != null) {
             module.registerLoopVariable(ident, new LoopVariableRangeDefinition(fromInt, toInt, stepInt));
 

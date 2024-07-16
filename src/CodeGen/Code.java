@@ -510,7 +510,7 @@ public class Code {
 
         for (int i = targetedMajorityGate; i >= 0; --i) {
             unmajorityAndSumGates[currUnmajorityGateCount] = new UnmajorityAndSumGate(majorityGates[i]);
-            unmajorityAndSumGates[currUnmajorityGateCount].inNewCarry = unmajorityAndSumGates[i].outCarry;
+            unmajorityAndSumGates[currUnmajorityGateCount].inNewCarry = unmajorityAndSumGates[currUnmajorityGateCount - 1].outCarry;
             synthesizedGates.addAll(unmajorityAndSumGates[currUnmajorityGateCount].internalGates);
             ++currUnmajorityGateCount;
         }

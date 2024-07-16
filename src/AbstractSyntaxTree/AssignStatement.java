@@ -34,6 +34,8 @@ public class AssignStatement extends Statement {
         ExpressionResult res = expression.generate(module);
         gates.addAll(res.gates);
 
+        if (res.isNumber && res.number == 0)
+            return new ArrayList<>();
 
         switch (kind) {
             case XOR:
@@ -61,6 +63,4 @@ public class AssignStatement extends Statement {
     public AssignStatement replaceSignals(HashMap<String, String> replace, Mod currentModule) {
         return new AssignStatement(signalExp.replaceSignals(replace, currentModule), expression.replaceSignals(replace, currentModule), kind, lineAware);
     }
-
-
 }

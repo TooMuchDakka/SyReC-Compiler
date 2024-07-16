@@ -85,7 +85,7 @@ public class SignalExpression extends Expression {
     @Override
     public int getWidth(Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup) {
         final int accessedBitRangeStart = this.startWidth != null ? this.startWidth.evaluate(loopVariableRangeDefinitionLookup) : 0;
-        final int accessedBitRangEnd = this.endWidth != null ? this.endWidth.evaluate(loopVariableRangeDefinitionLookup) : (this.originalWidth -1);
+        final int accessedBitRangEnd = this.endWidth != null ? this.endWidth.evaluate(loopVariableRangeDefinitionLookup) : (this.lines.size() -1);
         return (accessedBitRangEnd - accessedBitRangeStart) + 1;
     }
 
