@@ -7,12 +7,14 @@ import AbstractSyntaxTree.SignalExpression;
 import SymTable.Mod;
 import SymTable.Obj;
 
+import javax.management.openmbean.KeyAlreadyExistsException;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.security.KeyException;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
@@ -267,6 +269,7 @@ public class Code {
                     .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
 
             for (Gate gate : gates) {
+                validateGateDefinition(gate);
                 exportFileWriter.append(stringifyGate(gate, ioToVariableMappingLookup));
                 exportFileWriter.newLine();
             }
@@ -274,6 +277,8 @@ public class Code {
             exportFileWriter.append(".end");
             exportFileWriter.close();
         } catch (IOException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -699,5 +704,25 @@ public class Code {
         }
         Collections.reverse(reverse);
         return reverse;
+    }
+
+    private static void validateGateDefinition(Gate gate) throws KeyException {
+        Set<String> controlLines = new HashSet<>();
+        Set<String> targetLines = new HashSet<>();
+        if (controlLines.isEmpty())
+            return;
+
+        for (var controlLine : gate.getControlLines()){
+            if (!controlLines.add(controlLine))
+                throw new KeyAlreadyExistsException("Gate defined duplicate control line " + controlLine);
+        }
+
+        for (var targetLine : gate.getTargetLines()){
+            if (!targetLines.add(targetLine))
+                throw new KeyAlreadyExistsException("Gate defined duplicate target line " + targetLine);
+
+            if (controlLines.contains(targetLine))
+                throw new KeyException("Gate used line " + targetLine + " as both control and target line");
+        }
     }
 }
