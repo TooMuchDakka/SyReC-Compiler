@@ -37,8 +37,10 @@ public class ShiftExpression extends Expression {
         if (res.isNumber)
             return new ExpressionResult(kind == Kind.LEFT ? (res.number << numberRes) : (res.number >> numberRes));
 
+        /* TODO: Uncomment if the compiler should also perform some optimizations
         if (numberRes == toBeShiftedExpressionBitwidth)
             return new ExpressionResult(0);
+        */
 
         SignalExpression shiftLine = module.getAdditionalLines(toBeShiftedExpressionBitwidth);
         usedLines.addAll(shiftLine.getLines());

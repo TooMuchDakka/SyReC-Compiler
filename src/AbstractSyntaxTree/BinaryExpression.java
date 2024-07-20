@@ -2,11 +2,10 @@ package AbstractSyntaxTree;
 
 import CodeGen.Code;
 import CodeGen.ExpressionResult;
+import CodeGen.Gate;
 import SymTable.Mod;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 public class BinaryExpression extends Expression {
 
@@ -101,13 +100,65 @@ public class BinaryExpression extends Expression {
                 if (firstRes.isNumber && secondRes.isNumber) {
                     return new ExpressionResult(firstRes.number + secondRes.number);
                 } else {
-                    int numAdditionalLinesRequiredForSynthesis = Math.max(firstRes.getWidth(module.getLoopVariableRangeDefinitionsLookup()), secondRes.getWidth(module.getLoopVariableRangeDefinitionsLookup())) + 1;
+                    ExpressionResult lhsOperand = firstRes;
+                    ExpressionResult rhsOperand = secondRes;
+
+                    int bitWidthOfNonConstantOperand = Math.max(lhsOperand.getWidth(module.getLoopVariableRangeDefinitionsLookup()), rhsOperand.getWidth(module.getLoopVariableRangeDefinitionsLookup()));
+                    if (rhsOperand.isNumber) {
+                        rhsOperand = firstRes;
+                        bitWidthOfNonConstantOperand = lhsOperand.getWidth(module.getLoopVariableRangeDefinitionsLookup());
+                        if (Math.abs(rhsOperand.number) > Math.pow(2, bitWidthOfNonConstantOperand))
+                            rhsOperand = new ExpressionResult(rhsOperand.number % (int) Math.pow(2, bitWidthOfNonConstantOperand));
+                            //throw new UnsupportedOperationException("Constant value " + rhsOperand.number + " cannot be stored in a bitstring of length 2^" + bitWidthOfNonConstantOperand);
+                    }
+                    else if (lhsOperand.isNumber) {
+                        bitWidthOfNonConstantOperand = rhsOperand.getWidth(module.getLoopVariableRangeDefinitionsLookup());
+                        if (Math.abs(lhsOperand.number) > Math.pow(2, bitWidthOfNonConstantOperand))
+                            lhsOperand = new ExpressionResult(lhsOperand.number % (int) Math.pow(2, bitWidthOfNonConstantOperand));
+                            //throw new UnsupportedOperationException("Constant value " + lhsOperand.number + " cannot be stored in a bitstring of length 2^" + bitWidthOfNonConstantOperand);
+                    }
+
+                    final int numAdditionalLinesRequiredForSynthesis = bitWidthOfNonConstantOperand + 1;
                     SignalExpression plusLines = module.getAdditionalLines(numAdditionalLinesRequiredForSynthesis);
-                    usedLines.addAll(plusLines.getLines());
-                    ExpressionResult res = new ExpressionResult(plusLines);
+
+                    ArrayList<String> additionalResultStorageLines = new ArrayList<>(numAdditionalLinesRequiredForSynthesis - 1);
+                    for (int i = 0; i < numAdditionalLinesRequiredForSynthesis - 1; ++i)
+                        additionalResultStorageLines.add(plusLines.getLineName(i));
+
+                    SignalExpression additionResultStorageLines = new SignalExpression(plusLines.name, additionalResultStorageLines);
+
+                    usedLines.addAll(additionResultStorageLines.getLines());
+                    ExpressionResult res = new ExpressionResult(additionResultStorageLines);
                     res.gates.addAll(firstRes.gates);
                     res.gates.addAll(secondRes.gates);
-                    res.gates.addAll(Code.plus(firstRes, secondRes, plusLines, module.getLoopVariableRangeDefinitionsLookup()));
+
+                    if (!lhsOperand.isNumber && !rhsOperand.isNumber){
+                        res.gates.addAll(Code.plus(lhsOperand, rhsOperand, plusLines, module.getLoopVariableRangeDefinitionsLookup()));
+                        return res;
+                    }
+
+                    int valueOfConstantValueOperand = lhsOperand.number;
+                    if (rhsOperand.isNumber) {
+                        rhsOperand = firstRes;
+                        valueOfConstantValueOperand = rhsOperand.number;
+                    }
+
+                    /*
+                    If one of the operands is a constant known at compile time, transfer the value of the constant to the additional lines used to store the backup of the rhs operand and use these additional lines to store
+                    the result of the addition. I.e. the following two case distinctions are resolved as follows (with c indicating the constant number while upper case letters denote signals [with A denoting the additional lines])
+                    I. (S + c) <=> A ^= c; A += S
+                    II. (c + S) >=> A ^= c; A += S
+                     */
+                    for (int i = 0; i < numAdditionalLinesRequiredForSynthesis - 2; ++i) {
+                        if (((valueOfConstantValueOperand >> i) & 1) == 1) {
+                            Gate additionalLineValueSetToConstantGate = new Gate(Gate.Kind.Toffoli);
+                            additionalLineValueSetToConstantGate.addTargetLine(plusLines.getLineName(i));
+                            res.gates.add(additionalLineValueSetToConstantGate);
+                        }
+                    }
+
+                    SignalExpression carryInAdditionalLineContainer = new SignalExpression(plusLines.name, new ArrayList<>(Arrays.asList(plusLines.getLineName(numAdditionalLinesRequiredForSynthesis - 1))));
+                    res.gates.addAll(Code.plusAssign(additionResultStorageLines, rhsOperand, carryInAdditionalLineContainer, module.getLoopVariableRangeDefinitionsLookup()));
                     return res;
                 }
                 // TODO:

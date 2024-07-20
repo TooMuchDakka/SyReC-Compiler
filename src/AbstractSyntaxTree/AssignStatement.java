@@ -31,29 +31,53 @@ public class AssignStatement extends Statement {
     public ArrayList<Gate> generate(CodeMod module) {
         signalExp.generate(module);
         ArrayList<Gate> gates = new ArrayList<>();
-        ExpressionResult res = expression.generate(module);
-        gates.addAll(res.gates);
 
+        /* TODO: Uncomment if the compiler shall also perform some optimizations
         if (res.isNumber && res.number == 0)
             return new ArrayList<>();
+        */
+
+        ExpressionResult assignmentRhsOperand = expression.generate(module);
+        gates.addAll(assignmentRhsOperand.gates);
+
+        final int bitwidthOfAssignedToSignal = signalExp.getWidth(module.getLoopVariableRangeDefinitionsLookup());
+        if (assignmentRhsOperand.isNumber && kind != Kind.XOR) {
+            int assignmentRhsOperandConstantValue = assignmentRhsOperand.number;
+            if (assignmentRhsOperandConstantValue > Math.pow(2, bitwidthOfAssignedToSignal))
+                assignmentRhsOperandConstantValue = assignmentRhsOperandConstantValue % (int) Math.pow(2, bitwidthOfAssignedToSignal);
+
+            ArrayList<Gate> constantValueTransferGatesContainer = new ArrayList<>();
+            assignmentRhsOperand = new ExpressionResult(module.getAdditionalLines(bitwidthOfAssignedToSignal));
+            final int bitwidthOfConstant = (int) (Math.log(assignmentRhsOperand.number) / Math.log(2));
+
+            for (int i = 0; i < bitwidthOfConstant; ++i){
+                if (((assignmentRhsOperandConstantValue >> i) & 1) == 1) {
+                    Gate constantValueTransferGate = new Gate(Gate.Kind.Toffoli);
+                    constantValueTransferGate.addTargetLine(assignmentRhsOperand.getLineName(i));
+                    constantValueTransferGatesContainer.add(constantValueTransferGate);
+                }
+            }
+
+            gates.addAll(constantValueTransferGatesContainer);
+        }
 
         switch (kind) {
             case XOR:
-                gates.addAll(Code.xorAssign(signalExp, res, module.getLoopVariableRangeDefinitionsLookup()));
+                gates.addAll(Code.xorAssign(signalExp, assignmentRhsOperand, module.getLoopVariableRangeDefinitionsLookup()));
                 break;
             case PLUS: {
                 SignalExpression additionalLinesRequiredForSynthesis = module.getAdditionalLines(1);
-                gates.addAll(Code.plusAssign(signalExp, res, additionalLinesRequiredForSynthesis, module.getLoopVariableRangeDefinitionsLookup()));
+                gates.addAll(Code.plusAssign(signalExp, assignmentRhsOperand, additionalLinesRequiredForSynthesis, module.getLoopVariableRangeDefinitionsLookup()));
                 break;
             }
             case MINUS: {
                 SignalExpression additionalLinesRequiredForSynthesis = module.getAdditionalLines(1);
-                gates.addAll(Code.minusAssign(signalExp, res, additionalLinesRequiredForSynthesis, module.getLoopVariableRangeDefinitionsLookup()));
+                gates.addAll(Code.minusAssign(signalExp, assignmentRhsOperand, additionalLinesRequiredForSynthesis, module.getLoopVariableRangeDefinitionsLookup()));
                 break;
             }
         }
         if (lineAware) {
-            gates.addAll(Code.reverseGates(res.gates));
+            gates.addAll(Code.reverseGates(assignmentRhsOperand.gates));
             expression.resetLines(module);
         }
         return gates;

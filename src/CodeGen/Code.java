@@ -447,10 +447,12 @@ public class Code {
         ArrayList<Gate> gates = new ArrayList<>();
         if (res.isNumber) {
             int number = res.number;
+            /* TODO: Uncomment if the compiler should also perform some optimizations
             if (number == 0) {
                 //neutral operation, nothing to do
                 return gates;
             }
+             */
             if (number < 0) {
                 //if we substract a negative number we can just use plusAssign
                 ExpressionResult negative = new ExpressionResult(-number);
