@@ -41,24 +41,26 @@ public class AssignStatement extends Statement {
         gates.addAll(assignmentRhsOperand.gates);
 
         final int bitwidthOfAssignedToSignal = signalExp.getWidth(module.getLoopVariableRangeDefinitionsLookup());
-        if (assignmentRhsOperand.isNumber && kind != Kind.XOR) {
+        if (assignmentRhsOperand.isNumber) {
             int assignmentRhsOperandConstantValue = assignmentRhsOperand.number;
             if (assignmentRhsOperandConstantValue > Math.pow(2, bitwidthOfAssignedToSignal))
                 assignmentRhsOperandConstantValue = assignmentRhsOperandConstantValue % (int) Math.pow(2, bitwidthOfAssignedToSignal);
 
-            ArrayList<Gate> constantValueTransferGatesContainer = new ArrayList<>();
             assignmentRhsOperand = new ExpressionResult(module.getAdditionalLines(bitwidthOfAssignedToSignal));
-            final int bitwidthOfConstant = (int) (Math.log(assignmentRhsOperand.number) / Math.log(2));
 
-            for (int i = 0; i < bitwidthOfConstant; ++i){
-                if (((assignmentRhsOperandConstantValue >> i) & 1) == 1) {
-                    Gate constantValueTransferGate = new Gate(Gate.Kind.Toffoli);
-                    constantValueTransferGate.addTargetLine(assignmentRhsOperand.getLineName(i));
-                    constantValueTransferGatesContainer.add(constantValueTransferGate);
+            if (kind != Kind.XOR) {
+                ArrayList<Gate> constantValueTransferGatesContainer = new ArrayList<>();
+                final int bitwidthOfConstant = (int) (Math.log(assignmentRhsOperand.number) / Math.log(2));
+
+                for (int i = 0; i < bitwidthOfConstant; ++i) {
+                    if (((assignmentRhsOperandConstantValue >> i) & 1) == 1) {
+                        Gate constantValueTransferGate = new Gate(Gate.Kind.Toffoli);
+                        constantValueTransferGate.addTargetLine(assignmentRhsOperand.getLineName(i));
+                        constantValueTransferGatesContainer.add(constantValueTransferGate);
+                    }
                 }
+                gates.addAll(constantValueTransferGatesContainer);
             }
-
-            gates.addAll(constantValueTransferGatesContainer);
         }
 
         switch (kind) {
