@@ -5,8 +5,7 @@ import CodeGen.ExpressionResult;
 import CodeGen.Gate;
 import SymTable.Mod;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.*;
 
 public class AssignStatement extends Statement {
 
@@ -41,6 +40,8 @@ public class AssignStatement extends Statement {
         gates.addAll(assignmentRhsOperand.gates);
 
         final int bitwidthOfAssignedToSignal = signalExp.getWidth(module.getLoopVariableRangeDefinitionsLookup());
+        Optional<List<Gate>> constantValueTransferGatesContainer = Optional.empty();
+
         if (assignmentRhsOperand.isNumber) {
             int assignmentRhsOperandConstantValue = assignmentRhsOperand.number;
             if (assignmentRhsOperandConstantValue > Math.pow(2, bitwidthOfAssignedToSignal))
@@ -49,17 +50,18 @@ public class AssignStatement extends Statement {
             assignmentRhsOperand = new ExpressionResult(module.getAdditionalLines(bitwidthOfAssignedToSignal));
 
             if (kind != Kind.XOR) {
-                ArrayList<Gate> constantValueTransferGatesContainer = new ArrayList<>();
-                final int bitwidthOfConstant = (int) (Math.log(assignmentRhsOperand.number) / Math.log(2));
+                List<Gate> constantValueStorageContainer = new ArrayList<>(bitwidthOfAssignedToSignal);
+                final int bitwidthOfConstant = ((int) (Math.log(assignmentRhsOperandConstantValue) / Math.log(2))) + 1;
 
                 for (int i = 0; i < bitwidthOfConstant; ++i) {
                     if (((assignmentRhsOperandConstantValue >> i) & 1) == 1) {
                         Gate constantValueTransferGate = new Gate(Gate.Kind.Toffoli);
                         constantValueTransferGate.addTargetLine(assignmentRhsOperand.getLineName(i));
-                        constantValueTransferGatesContainer.add(constantValueTransferGate);
+                        constantValueStorageContainer.add(constantValueTransferGate);
                     }
                 }
-                gates.addAll(constantValueTransferGatesContainer);
+                constantValueTransferGatesContainer = Optional.of(constantValueStorageContainer);
+                gates.addAll(constantValueStorageContainer);
             }
         }
 
@@ -69,7 +71,7 @@ public class AssignStatement extends Statement {
                 break;
             case PLUS: {
                 SignalExpression additionalLinesRequiredForSynthesis = module.getAdditionalLines(1);
-                gates.addAll(Code.plusAssign(signalExp, assignmentRhsOperand, additionalLinesRequiredForSynthesis, module.getLoopVariableRangeDefinitionsLookup()));
+                gates.addAll(Code.plusAssign(signalExp, assignmentRhsOperand, additionalLinesRequiredForSynthesis, module.getLoopVariableRangeDefinitionsLookup(), true));
                 break;
             }
             case MINUS: {
@@ -81,6 +83,11 @@ public class AssignStatement extends Statement {
         if (lineAware) {
             gates.addAll(Code.reverseGates(assignmentRhsOperand.gates));
             expression.resetLines(module);
+        }
+
+        // Revert assignment of compile time constant value to additional lines
+        if (constantValueTransferGatesContainer.isPresent()) {
+            gates.addAll(constantValueTransferGatesContainer.get().reversed());
         }
         return gates;
     }

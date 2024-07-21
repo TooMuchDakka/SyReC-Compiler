@@ -6,6 +6,7 @@ import AbstractSyntaxTree.LoopVariableRangeDefinition;
 import AbstractSyntaxTree.SignalExpression;
 import SymTable.Mod;
 import SymTable.Obj;
+import sun.misc.Signal;
 
 import javax.management.openmbean.KeyAlreadyExistsException;
 import java.io.BufferedWriter;
@@ -444,37 +445,40 @@ public class Code {
         return gates;
     }
 
-    public static ArrayList<Gate> plusAssign(SignalExpression signalExp, ExpressionResult res, SignalExpression additionalLines, Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup) {
-        return internalAddAssign(Optional.of(signalExp), new ExpressionResult(signalExp), res, additionalLines, loopVariableRangeDefinitionLookup);
+    public static ArrayList<Gate> plusAssign(SignalExpression signalExp, ExpressionResult res, SignalExpression additionalLines, Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup, boolean isCarryInBitAssumedToBeZero) {
+        return internalAddAssign(Optional.of(signalExp), new ExpressionResult(signalExp), res, additionalLines, loopVariableRangeDefinitionLookup, isCarryInBitAssumedToBeZero);
     }
 
     public static ArrayList<Gate> minusAssign(SignalExpression signalExp, ExpressionResult res, SignalExpression additionalLines, Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup) {
         ArrayList<Gate> gates = new ArrayList<>();
-        if (res.isNumber) {
-            int number = res.number;
-            /* TODO: Uncomment if the compiler should also perform some optimizations
-            if (number == 0) {
-                //neutral operation, nothing to do
-                return gates;
-            }
-             */
-            if (number < 0) {
-                //if we substract a negative number we can just use plusAssign
-                ExpressionResult negative = new ExpressionResult(-number);
-                return plusAssign(signalExp, negative, additionalLines, loopVariableRangeDefinitionLookup);
-            }
+
+        // Synthesize statement a -= b as a = a + NOT(b) + 1
+        Gate carryInValueOneSetGate = new Gate(Toffoli);
+        carryInValueOneSetGate.addTargetLine(additionalLines.getLineName(0));
+        gates.add(carryInValueOneSetGate);
+
+        final int assignedToSignalBitWidth = signalExp.getWidth(loopVariableRangeDefinitionLookup);
+        List<Gate> minuendInversionGates = new ArrayList<>(assignedToSignalBitWidth);
+        for (int i = 0; i < assignedToSignalBitWidth; ++i){
+            Gate minuendBitInversionGate = new Gate(Toffoli);
+            minuendBitInversionGate.addTargetLine(res.getLineName(i));
+            minuendInversionGates.add(minuendBitInversionGate);
         }
-        //apart from the handling of negative or 0 numbers we can just use plusAssign and reverse the result
-        gates = plusAssign(signalExp, res, additionalLines, loopVariableRangeDefinitionLookup);
-        Collections.reverse(gates);
+        gates.addAll(minuendInversionGates);
+        gates.addAll(plusAssign(signalExp, res, additionalLines, loopVariableRangeDefinitionLookup, false));
+        gates.addAll(minuendInversionGates.reversed());
+        gates.add(carryInValueOneSetGate);
         return gates;
     }
 
-    public static ArrayList<Gate> plus(ExpressionResult firstExp, ExpressionResult secondExp, SignalExpression additionalLines, Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup) {
-        return internalAddAssign(Optional.empty(), firstExp, secondExp, additionalLines, loopVariableRangeDefinitionLookup);
+    public static ArrayList<Gate> plus(ExpressionResult firstExp, ExpressionResult secondExp, SignalExpression additionalLines, Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup, boolean isCarryInBitAssumedToBeZero) {
+        return internalAddAssign(Optional.empty(), firstExp, secondExp, additionalLines, loopVariableRangeDefinitionLookup, isCarryInBitAssumedToBeZero);
     }
 
-    private static ArrayList<Gate> internalAddAssign(Optional<SignalExpression> optionallyAssignedToSignal, ExpressionResult lhsOperand, ExpressionResult rhsOperand, SignalExpression additionalLines, Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup) {
+    private static ArrayList<Gate> internalAddAssign(Optional<SignalExpression> optionallyAssignedToSignal, ExpressionResult lhsOperand, ExpressionResult rhsOperand, SignalExpression additionalLines, Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup, boolean isCarryInBitAssumedToBeZero) {
+        if (rhsOperand.isNumber)
+            throw new UnsupportedOperationException("Rhs operand of plus assign operation is expected to be not a compile time constant value");
+
         ArrayList<Gate> synthesizedGates = new ArrayList<>();
         int expectedOperandsBitwidth = lhsOperand.getWidth(loopVariableRangeDefinitionLookup);
 
@@ -523,9 +527,11 @@ public class Code {
         }
 
         if (optionallyAssignedToSignal.isEmpty()) {
-            Gate inversionOfInCarryLineGate = new Gate(Toffoli);
-            inversionOfInCarryLineGate.addTargetLine(inCarryLine);
-            synthesizedGates.add(inversionOfInCarryLineGate);
+            if (isCarryInBitAssumedToBeZero) {
+                Gate inversionOfInCarryLineGate = new Gate(Toffoli);
+                inversionOfInCarryLineGate.addTargetLine(inCarryLine);
+                synthesizedGates.add(inversionOfInCarryLineGate);
+            }
 
             for (int i = 0; i < expectedOperandsBitwidth; ++i) {
                 Gate secondExprRestoreFromBackupGate = new Gate(Fredkin);
@@ -536,52 +542,89 @@ public class Code {
                 synthesizedGates.add(secondExprRestoreFromBackupGate);
             }
 
-            Gate restoreOfInCarryValueGate = new Gate(Toffoli);
-            restoreOfInCarryValueGate.addTargetLine(inCarryLine);
-            synthesizedGates.add(restoreOfInCarryValueGate);
+            if (isCarryInBitAssumedToBeZero) {
+                Gate restoreOfInCarryValueGate = new Gate(Toffoli);
+                restoreOfInCarryValueGate.addTargetLine(inCarryLine);
+                synthesizedGates.add(restoreOfInCarryValueGate);
+            }
         }
         return synthesizedGates;
     }
 
-    // TODO: Use reverse of addition
-    public static ArrayList<Gate> minus(ExpressionResult firstExp, ExpressionResult secondExp, SignalExpression additionalLines, SignalExpression twosComplementLines, Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup) {
+    public static ArrayList<Gate> minus(ExpressionResult firstExp, ExpressionResult secondExp, SignalExpression additionalLines, Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup) {
         //The twosComplementLines is null if one of the numbers is a number
         ArrayList<Gate> gates = new ArrayList<>();
+
+        ExpressionResult subtrahend = firstExp;
+        ExpressionResult minuend = secondExp;
+
+        if (firstExp.isNumber && secondExp.isNumber)
+            throw new IllegalStateException("Both operands being compile time constants should have already been handled during processing of AST");
+
+        final int noneConstantOperandBitwidth = firstExp.isNumber ? secondExp.getWidth(loopVariableRangeDefinitionLookup) : firstExp.getWidth(loopVariableRangeDefinitionLookup);
+        Optional<SignalExpression> constantOperandValueContainer = Optional.empty();
         if (firstExp.isNumber || secondExp.isNumber) {
-            //both cant be a number because else the result would be handled by the AST
-            int number = numberNotRes(firstExp, secondExp);
-            firstExp = resNotNumber(firstExp, secondExp);
-            if (number == 0) {
-                //neutral operation, just copy Exp to lines
-                for (int i = 0; i < firstExp.getWidth(loopVariableRangeDefinitionLookup); i++) {
-                    Gate tempGate;
-                    tempGate = new Gate(Toffoli);
-                    tempGate.addTargetLine(additionalLines.getLineName(i));
-                    tempGate.addControlLine(firstExp.getLineName(i));
-                    gates.add(tempGate);
-                }
+            int constantOperandValue = numberNotRes(firstExp, secondExp);
+
+            if (constantOperandValue < 0 && secondExp.isNumber) {
+                //if we substract a negative number we can just use plus
+                ExpressionResult negative = new ExpressionResult(-constantOperandValue);
+                return plus(firstExp, negative, additionalLines, loopVariableRangeDefinitionLookup, true);
+            } else if (constantOperandValue == 0) {
                 return gates;
             }
-            if (number < 0) {
-                //if we substract a negative number we can just use plus
-                ExpressionResult negative = new ExpressionResult(-number);
-                return plus(firstExp, negative, additionalLines, loopVariableRangeDefinitionLookup);
+
+            if (Math.abs(constantOperandValue) > Math.pow(2, noneConstantOperandBitwidth))
+                constantOperandValue = constantOperandValue % (int) Math.pow(2, noneConstantOperandBitwidth);
+
+            constantOperandValue = CalculateTwoComplement(constantOperandValue);
+            final ArrayList<Boolean> binaryDataOfConstantValueOperand = intToBool(constantOperandValue);
+            for (int i = 0; i < binaryDataOfConstantValueOperand.size(); ++i) {
+                if (binaryDataOfConstantValueOperand.get(i)) {
+                    Gate constantValueTransferGate = new Gate(Toffoli);
+                    constantValueTransferGate.addTargetLine(additionalLines.getLineName(i));
+                    gates.add(constantValueTransferGate);
+                }
             }
-            //create twos complement of number
-            number = ~number;
-            number = (number & (int) Math.pow(2, firstExp.getWidth(loopVariableRangeDefinitionLookup)) - 1); //drop all unneeded ones
-            number++;
-            return plus(firstExp, secondExp, additionalLines, loopVariableRangeDefinitionLookup);
-        } else {
-            //second expression is also an expression and not a number
-            //do twosComplement on the SignalLine
-            ExpressionResult twosComplementRes = new ExpressionResult(twosComplementLines);
-            twosComplementRes.gates.addAll(notExp(secondExp, twosComplementRes.signal, loopVariableRangeDefinitionLookup));
-            twosComplementRes.gates.addAll(increment(twosComplementRes.signal, loopVariableRangeDefinitionLookup));
-            gates.addAll(twosComplementRes.gates);
-            gates.addAll(plus(firstExp, twosComplementRes, additionalLines, loopVariableRangeDefinitionLookup));
-            return gates;
+
+            if (firstExp.isNumber)
+                subtrahend = new ExpressionResult(additionalLines);
+            else
+                minuend = new ExpressionResult(additionalLines);
+
+            ArrayList<String> constantOperandValueContainerLines = new ArrayList<>(noneConstantOperandBitwidth);
+            for (int i = 0; i < noneConstantOperandBitwidth; ++i)
+                constantOperandValueContainerLines.add(additionalLines.getLineName(i));
+
+            constantOperandValueContainer = Optional.of(new SignalExpression(additionalLines.name, constantOperandValueContainerLines));
         }
+
+        Gate carryInValueOneSetGate = new Gate(Toffoli);
+        carryInValueOneSetGate.addTargetLine(additionalLines.getLineName(noneConstantOperandBitwidth));
+        gates.add(carryInValueOneSetGate);
+
+        Collection<Gate> minuendInversionGates = new ArrayList<>(noneConstantOperandBitwidth);
+        for (int i = 0; i < noneConstantOperandBitwidth; ++i){
+            Gate minuendBitInversionGate = new Gate(Toffoli);
+            minuendBitInversionGate.addTargetLine(constantOperandValueContainer.orElse(minuend.signal).getLineName(i));
+            minuendInversionGates.add(minuendBitInversionGate);
+        }
+        gates.addAll(minuendInversionGates);
+
+        final SignalExpression carryInBit = new SignalExpression(additionalLines.name, carryInValueOneSetGate.getTargetLines());
+        if (firstExp.isNumber) {
+            gates.addAll(plusAssign(constantOperandValueContainer.get(), minuend, carryInBit, loopVariableRangeDefinitionLookup, false));
+        }
+        else if (secondExp.isNumber) {
+            gates.addAll(plusAssign(constantOperandValueContainer.get(), subtrahend, carryInBit, loopVariableRangeDefinitionLookup, false));
+        }
+        else {
+            gates.addAll(plus(subtrahend, minuend, additionalLines, loopVariableRangeDefinitionLookup, false));
+            gates.addAll(minuendInversionGates);
+        }
+        gates.add(carryInValueOneSetGate);
+
+        return gates;
     }
 
     public static ArrayList<Gate> bitwiseAnd(ExpressionResult firstExp, ExpressionResult secondExp, SignalExpression additionalLines, Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup) {
@@ -724,5 +767,13 @@ public class Code {
             if (controlLines.contains(targetLine))
                 throw new KeyException("Gate used line " + targetLine + " as both control and target line");
         }
+    }
+
+    public static int CalculateTwoComplement(int value){
+        if (value >= 0)
+            return value;
+
+        final int twoComplementConversionMask = Integer.MAX_VALUE;
+        return (value ^ twoComplementConversionMask) + 1;
     }
 }

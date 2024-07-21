@@ -133,7 +133,7 @@ public class BinaryExpression extends Expression {
                     res.gates.addAll(secondRes.gates);
 
                     if (!lhsOperand.isNumber && !rhsOperand.isNumber){
-                        res.gates.addAll(Code.plus(lhsOperand, rhsOperand, plusLines, module.getLoopVariableRangeDefinitionsLookup()));
+                        res.gates.addAll(Code.plus(lhsOperand, rhsOperand, plusLines, module.getLoopVariableRangeDefinitionsLookup(), true));
                         return res;
                     }
 
@@ -158,29 +158,27 @@ public class BinaryExpression extends Expression {
                     }
 
                     SignalExpression carryInAdditionalLineContainer = new SignalExpression(plusLines.name, new ArrayList<>(Arrays.asList(plusLines.getLineName(numAdditionalLinesRequiredForSynthesis - 1))));
-                    res.gates.addAll(Code.plusAssign(additionResultStorageLines, rhsOperand, carryInAdditionalLineContainer, module.getLoopVariableRangeDefinitionsLookup()));
+                    res.gates.addAll(Code.plusAssign(additionResultStorageLines, rhsOperand, carryInAdditionalLineContainer, module.getLoopVariableRangeDefinitionsLookup(), true));
                     return res;
                 }
                 // TODO:
-            case MINUS:
-                if (firstRes.isNumber && secondRes.isNumber) {
-                    return new ExpressionResult(firstRes.number - secondRes.number);
-                } else {
-                    int numAdditionalLinesRequiredForSynthesis = Math.max(firstRes.getWidth(module.getLoopVariableRangeDefinitionsLookup()), secondRes.getWidth(module.getLoopVariableRangeDefinitionsLookup())) + 1;
-                    SignalExpression minusLines = module.getAdditionalLines(numAdditionalLinesRequiredForSynthesis);
-                    usedLines.addAll(minusLines.getLines());
-                    SignalExpression twosComplementLines = null;
-                    if (!firstRes.isNumber && !secondRes.isNumber) {
-                        //only generate a line for the twos complement if both expressions are no number
-                        twosComplementLines = module.getAdditionalLines(minusLines.getWidth(module.getLoopVariableRangeDefinitionsLookup()));
-                        usedLines.addAll(twosComplementLines.getLines());
-                    }
-                    ExpressionResult res = new ExpressionResult(minusLines);
-                    res.gates.addAll(firstRes.gates);
-                    res.gates.addAll(secondRes.gates);
-                    res.gates.addAll(Code.minus(firstRes, secondRes, minusLines, twosComplementLines, module.getLoopVariableRangeDefinitionsLookup()));
-                    return res;
-                }
+            case MINUS: {
+                // Synthesize statement a - b as a + NOT(b) + 1
+                final int numAdditionalLinesRequiredForSynthesis = Math.max(firstRes.getWidth(module.getLoopVariableRangeDefinitionsLookup()), secondRes.getWidth(module.getLoopVariableRangeDefinitionsLookup())) + 1;
+                SignalExpression additionalLinesRequiredForSynthesis = module.getAdditionalLines(numAdditionalLinesRequiredForSynthesis);
+
+                ArrayList<String> resultStorageLines = new ArrayList<>(numAdditionalLinesRequiredForSynthesis - 1);
+                for (int i = 0; i < numAdditionalLinesRequiredForSynthesis - 1; ++i)
+                    resultStorageLines.add(additionalLinesRequiredForSynthesis.getLineName(i));
+
+                SignalExpression resultContainerLines = new SignalExpression(additionalLinesRequiredForSynthesis.name, resultStorageLines);
+                usedLines.addAll(resultContainerLines.getLines());
+                ExpressionResult res = new ExpressionResult(resultContainerLines);
+                res.gates.addAll(firstRes.gates);
+                res.gates.addAll(secondRes.gates);
+                res.gates.addAll(Code.minus(firstRes, secondRes, additionalLinesRequiredForSynthesis, module.getLoopVariableRangeDefinitionsLookup()));
+                return res;
+            }
             case BIT_XOR:
                 if (firstRes.isNumber && secondRes.isNumber) {
                     return new ExpressionResult(firstRes.number ^ secondRes.number);
