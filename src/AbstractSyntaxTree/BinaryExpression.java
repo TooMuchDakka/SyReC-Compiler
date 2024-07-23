@@ -105,7 +105,7 @@ public class BinaryExpression extends Expression {
 
                     int bitWidthOfNonConstantOperand = Math.max(lhsOperand.getWidth(module.getLoopVariableRangeDefinitionsLookup()), rhsOperand.getWidth(module.getLoopVariableRangeDefinitionsLookup()));
                     if (rhsOperand.isNumber) {
-                        rhsOperand = firstRes;
+                        //rhsOperand = firstRes;
                         bitWidthOfNonConstantOperand = lhsOperand.getWidth(module.getLoopVariableRangeDefinitionsLookup());
                         if (Math.abs(rhsOperand.number) > Math.pow(2, bitWidthOfNonConstantOperand))
                             rhsOperand = new ExpressionResult(rhsOperand.number % (int) Math.pow(2, bitWidthOfNonConstantOperand));
@@ -139,8 +139,8 @@ public class BinaryExpression extends Expression {
 
                     int valueOfConstantValueOperand = lhsOperand.number;
                     if (rhsOperand.isNumber) {
-                        rhsOperand = firstRes;
                         valueOfConstantValueOperand = rhsOperand.number;
+                        rhsOperand = firstRes;
                     }
 
                     /*
@@ -149,7 +149,7 @@ public class BinaryExpression extends Expression {
                     I. (S + c) <=> A ^= c; A += S
                     II. (c + S) >=> A ^= c; A += S
                      */
-                    for (int i = 0; i < numAdditionalLinesRequiredForSynthesis - 2; ++i) {
+                    for (int i = 0; i < numAdditionalLinesRequiredForSynthesis - 1; ++i) {
                         if (((valueOfConstantValueOperand >> i) & 1) == 1) {
                             Gate additionalLineValueSetToConstantGate = new Gate(Gate.Kind.Toffoli);
                             additionalLineValueSetToConstantGate.addTargetLine(plusLines.getLineName(i));

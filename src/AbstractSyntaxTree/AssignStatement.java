@@ -47,9 +47,9 @@ public class AssignStatement extends Statement {
             if (assignmentRhsOperandConstantValue > Math.pow(2, bitwidthOfAssignedToSignal))
                 assignmentRhsOperandConstantValue = assignmentRhsOperandConstantValue % (int) Math.pow(2, bitwidthOfAssignedToSignal);
 
-            assignmentRhsOperand = new ExpressionResult(module.getAdditionalLines(bitwidthOfAssignedToSignal));
-
             if (kind != Kind.XOR) {
+                assignmentRhsOperand = new ExpressionResult(module.getAdditionalLines(bitwidthOfAssignedToSignal));
+
                 List<Gate> constantValueStorageContainer = new ArrayList<>(bitwidthOfAssignedToSignal);
                 final int bitwidthOfConstant = ((int) (Math.log(assignmentRhsOperandConstantValue) / Math.log(2))) + 1;
 
@@ -62,6 +62,9 @@ public class AssignStatement extends Statement {
                 }
                 constantValueTransferGatesContainer = Optional.of(constantValueStorageContainer);
                 gates.addAll(constantValueStorageContainer);
+            }
+            else {
+                assignmentRhsOperand = new ExpressionResult(assignmentRhsOperandConstantValue);
             }
         }
 
