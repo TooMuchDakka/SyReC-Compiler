@@ -41,7 +41,7 @@ public class CodeMod {
                 lines.add(temp.name);
                 zeroLines.remove(zeroLines.size() - 1);
             } else {
-                temp = new Obj(Obj.Kind.Wire, "addLine" + addLineCounter, 1);
+                temp = new Obj(Obj.Kind.Wire, "addLine_" + addLineCounter, 1);
                 additionalLines.put(temp.name, temp);
                 lines.add(temp.name);
                 addLineCounter++;

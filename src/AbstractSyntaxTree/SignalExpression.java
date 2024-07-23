@@ -3,6 +3,7 @@ package AbstractSyntaxTree;
 import CodeGen.ExpressionResult;
 import SymTable.Mod;
 import SymTable.Obj;
+import sun.misc.Signal;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,6 +18,12 @@ public class SignalExpression extends Expression {
     private final NumberExpression endWidth;
     private final boolean noBus;
     private final int originalWidth;
+
+    private static Map<String, LoopVariableRangeDefinition> emptyLoopVariableLookup = new HashMap<>();
+
+    public static SignalExpression createInstanceForTest(String name, NumberExpression newStartWidth, NumberExpression newEndWidth){
+        return new SignalExpression(name, newStartWidth, newEndWidth);
+    }
 
     public SignalExpression(Obj obj, NumberExpression startWidth, NumberExpression endWidth) {
         //Constructor used when creating SignalExpression from InputCode
@@ -41,6 +48,21 @@ public class SignalExpression extends Expression {
         endWidth = newEndWidth;
         noBus = copyFrom.noBus;
         originalWidth = copyFrom.originalWidth;
+    }
+
+    private SignalExpression(String name, NumberExpression newStartWidth, NumberExpression newEndWidth){
+        final int bitwidth = (newEndWidth.evaluate(emptyLoopVariableLookup) - newStartWidth.evaluate(emptyLoopVariableLookup) + 1);
+        ArrayList<String> lines = new ArrayList<>(bitwidth);
+        noBus = bitwidth == 1;
+        this.name = name;
+
+        for (int i = 0; i < bitwidth; ++i)
+            lines.add(name + "_" + i);
+
+        originalWidth = bitwidth;
+        startWidth = newStartWidth;
+        endWidth = newEndWidth;
+        this.lines = lines;
     }
 
     public SignalExpression(String name, ArrayList<String> lines) {
