@@ -31,7 +31,7 @@ public class SynthesisTests {
         final var additionROperandObj = new Obj(Obj.Kind.Inout, additionROperandIdent, signalBitwidth);
         final var additionalLinesObj = new Obj(Obj.Kind.Wire, additionalLinesSignalIdent, 4);
 
-        var moduleParameters = new HashMap<String, Obj>();
+        var moduleParameters = new LinkedHashMap<String, Obj>();
         moduleParameters.put(assignmentLOperandIdent, assignmentLOperandObj);
         moduleParameters.put(additionLOperandIdent, additionLOperandObj);
         moduleParameters.put(additionROperandIdent, additionROperandObj);

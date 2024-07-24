@@ -4,10 +4,7 @@ import CodeGen.Gate;
 import SymTable.Obj;
 
 import javax.management.openmbean.KeyAlreadyExistsException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class CodeMod {
     //A Dataobject to hold the Code representation of a module
@@ -19,9 +16,9 @@ public class CodeMod {
     private final ArrayList<Statement> statements;
     private final Map<String, LoopVariableRangeDefinition> loopVars; //keeps track of the loopVars
 
-    public CodeMod(String name, HashMap<String, Obj> variables) {
+    public CodeMod(String name, LinkedHashMap<String, Obj> variables) {
         this.name = name;
-        this.variables = new HashMap<>(variables);
+        this.variables = new LinkedHashMap<>(variables);
         additionalLines = new HashMap<>();
         zeroLines = new ArrayList<>();
         statements = new ArrayList<>();
