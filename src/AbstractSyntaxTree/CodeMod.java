@@ -5,6 +5,7 @@ import SymTable.Obj;
 
 import javax.management.openmbean.KeyAlreadyExistsException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class CodeMod {
     //A Dataobject to hold the Code representation of a module
@@ -58,9 +59,19 @@ public class CodeMod {
 
 
     public ArrayList<Obj> getVariables() {    //returns variables and lines
-        ArrayList<Obj> list = new ArrayList<>(variables.values());
-        list.addAll(additionalLines.values());
-        list.addAll(zeroLines);
+        final int numVariables = variables.values().size() + additionalLines.values().size() + zeroLines.size();
+        ArrayList<Obj> list = new ArrayList<>(numVariables);
+        list.addAll(variables.values());
+
+        Collection<Obj> internalVariablesContainer = new ArrayList<>(numVariables - variables.values().size());
+        internalVariablesContainer.addAll(additionalLines.values());
+        internalVariablesContainer.addAll(zeroLines);
+
+        list.addAll(
+                internalVariablesContainer
+                .stream()
+                .sorted(Comparator.comparing(o -> Integer.valueOf(o.name.split("_")[1])))
+                .collect(Collectors.toList()));
         return list;
     }
 
