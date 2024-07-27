@@ -177,7 +177,7 @@ public class Code {
         return stringifiedGateDefinition.toString();
     }
 
-    public static void endModule(Path exportFilePath, Mod module, CodeMod curMod, Optional<String> optionalExportResultFilenamePrefix) {
+    public static void endModule(Path exportFilePath, Mod module, CodeMod curMod) {
         List<Gate> gates = curMod.generate();
 
         int totalBitLengthSumOfUsedModuleSignalLines = curMod.getVariables().stream().map(variable -> variable.width).reduce(0, Integer::sum);
@@ -189,13 +189,9 @@ public class Code {
         final String IS_CONSTANT_ONE_DEFINITION_ENTRY = "1";
         final String IS_NOT_CONSTANT_DEFINITION_ENTRY = "-";
         final String SIGNAL_IDENT_AND_BIT_DELIMITER = "_";
-        final String PADDING_INPUT_IDENT = SIGNAL_IDENT_AND_BIT_DELIMITER + "pI";
-        final String PADDING_OUTPUT_IDENT = SIGNAL_IDENT_AND_BIT_DELIMITER + "pO";
         final String VARIABLE_IDENT = SIGNAL_IDENT_AND_BIT_DELIMITER + "v";
 
         int variableCounter = 0;
-        int inputPaddingCounter = 0;
-        int outputPaddingCounter = 0;
         for (Obj signal : curMod.getVariables()) {
             Boolean isGarbageFlag = signal.kind == Obj.Kind.Wire;
             Optional<Boolean> isConstantFlag = signal.kind == Obj.Kind.Out || signal.kind == Obj.Kind.Wire ? Optional.of(false) : Optional.empty();
@@ -203,16 +199,6 @@ public class Code {
             String inputDefinitionEntryForSignal = signal.name;
             String outputDefinitionEntryForSignal = signal.name;
             Boolean wasInputIdentPadded = false;
-            if (signal.kind == Obj.Kind.In) {
-                outputDefinitionEntryForSignal = PADDING_OUTPUT_IDENT + outputPaddingCounter;
-                outputPaddingCounter++;
-            } else {
-                if (signal.kind != Obj.Kind.Inout) {
-                    inputDefinitionEntryForSignal = PADDING_INPUT_IDENT + inputPaddingCounter;
-                    inputPaddingCounter++;
-                    wasInputIdentPadded = true;
-                }
-            }
 
             String isConstantFlagStringified = IS_NOT_CONSTANT_DEFINITION_ENTRY;
             if (isConstantFlag.isPresent())

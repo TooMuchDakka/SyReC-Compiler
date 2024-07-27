@@ -311,12 +311,11 @@ public class Parser {
 		}
 		CodeMod codeModule = Code.createModule(curMod);
 		finishedModules.put(curMod.name, codeModule);
-		ExpressionResult ifExp = new ExpressionResult(1); //generate alwaysTrue if
-		
+
 		ArrayList<Statement> statements = StatementList();
 		codeModule.addStatements(statements);
 		if (this.builtExportResultPath != null)
-			Code.endModule(this.builtExportResultPath, curMod, codeModule, this.optionalExportResultFilenamePrefix);
+			Code.endModule(this.builtExportResultPath, curMod, codeModule);
 	}
 
 	void ParameterList() {
