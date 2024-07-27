@@ -36,7 +36,8 @@ public class IfStatement extends Statement {
             ifRes = new ExpressionResult(ifExp.number); //for a number nothing is needed
         } else {
             //saves the ifExpression to a new line and reverses the calculation to reset all possible additional Lines
-            ifRes = new ExpressionResult(module.getAdditionalLines(1));
+            ifRes = new ExpressionResult(module.getAdditionalLines(ifExp.getWidth(module.getLoopVariableRangeDefinitionsLookup())));
+            // TODO: expression size of operands is not checked
             gates.addAll(Code.xorAssign(ifRes.signal, ifExp, module.getLoopVariableRangeDefinitionsLookup()));
             if (lineAware) {
                 gates.addAll(Code.reverseGates(ifExp.gates));
