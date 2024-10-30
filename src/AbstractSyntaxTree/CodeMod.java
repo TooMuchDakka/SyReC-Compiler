@@ -57,7 +57,7 @@ public class CodeMod {
         }
     }
 
-
+    // TODO: Internal variables of called modules in module body are added as variables instead of internals
     public ArrayList<Obj> getVariables() {    //returns variables and lines
         final int numVariables = variables.values().size() + additionalLines.values().size() + zeroLines.size();
         ArrayList<Obj> list = new ArrayList<>(numVariables);

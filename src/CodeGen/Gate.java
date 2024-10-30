@@ -1,5 +1,6 @@
 package CodeGen;
 
+import javax.management.openmbean.KeyAlreadyExistsException;
 import java.util.ArrayList;
 
 public class Gate {
@@ -25,18 +26,25 @@ public class Gate {
     }
 
     public void addControlLines(ArrayList<String> controlLines) {
-        this.controlLines.addAll(controlLines);
+        for (String controlLine : controlLines)
+            addControlLine(controlLine);
     }
 
     public void addControlLine(String controlLine) {
+        if (controlLines.contains(controlLine))
+            return;
+
         controlLines.add(controlLine);
     }
 
     public void addTargetLines(ArrayList<String> targetLines) {
-        this.targetLines.addAll(targetLines);
+        for (String targetLine : targetLines)
+            addTargetLine(targetLine);
     }
 
     public void addTargetLine(String targetLine) {
+        if (targetLines.contains(targetLine))
+            return;
         targetLines.add(targetLine);
     }
 

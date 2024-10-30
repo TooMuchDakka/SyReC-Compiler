@@ -280,10 +280,18 @@ public class BinaryExpression extends Expression {
                     return res;
                 }
             case BIT_OR:
-                ExpressionResult res5 = new ExpressionResult(0);
-                System.out.println("Placeholder BitwiseOr generated");
-                res5.gates.addAll(Code.placeholder());
-                break;
+                if (firstRes.isNumber && secondRes.isNumber) {
+                    return new ExpressionResult(firstRes.number | secondRes.number);
+                }
+                else {
+                    SignalExpression bitOrLines = module.getAdditionalLines(Math.max(firstRes.getWidth(module.getLoopVariableRangeDefinitionsLookup()), secondRes.getWidth(module.getLoopVariableRangeDefinitionsLookup())));
+                    usedLines.addAll(bitOrLines.getLines());
+                    ExpressionResult res = new ExpressionResult(bitOrLines);
+                    res.gates.addAll(firstRes.gates);
+                    res.gates.addAll(secondRes.gates);
+                    res.gates.addAll(Code.bitwiseOr(firstRes, secondRes, bitOrLines, module.getLoopVariableRangeDefinitionsLookup()));
+                    return res;
+                }
             case LESSER:
                 ExpressionResult res6 = new ExpressionResult(0);
                 System.out.println("Placeholder LesserThan generated");

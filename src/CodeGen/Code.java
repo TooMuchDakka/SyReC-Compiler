@@ -651,6 +651,73 @@ public class Code {
         return gates;
     }
 
+    public static ArrayList<Gate> bitwiseOr(ExpressionResult firstExp, ExpressionResult secondExp, SignalExpression additionalLines, Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup){
+        ArrayList<Gate> gates = new ArrayList<>();
+        if (firstExp.isNumber || secondExp.isNumber) {
+            //both cant be a number because else the result would be handled by the AST
+            int number = numberNotRes(firstExp, secondExp);
+            firstExp = resNotNumber(firstExp, secondExp);
+            if (number == 0) {
+                for (int i = 0; i < firstExp.getWidth(loopVariableRangeDefinitionLookup); ++i) {
+                    Gate orGate = new Gate(Toffoli);
+                    orGate.addControlLine(firstExp.getLineName(i));
+                    orGate.addTargetLine(additionalLines.getLineName(i));
+                    gates.add(orGate);
+                    return gates;
+                }
+            }
+            if (number < 0) {
+                //changes negative number to its positive representation with the given lines
+                int range = (int) Math.pow(2, firstExp.getWidth(loopVariableRangeDefinitionLookup));  //so for a 5bit number this would be 32
+                number = range + (number % range);    //if the number is bigger than the range we can ignore all other bits
+            }
+            ArrayList<Boolean> numBool = intToBool(number);
+            //we now have firstExp as arbitrary Expression and a BooleanList for the number
+            for (int i = 0; i < firstExp.getWidth(loopVariableRangeDefinitionLookup) && i < numBool.size(); i++) {
+                Gate tempGate;
+                if (numBool.get(i)) {
+                    tempGate = new Gate(Toffoli);
+                    tempGate.addTargetLine(additionalLines.getLineName(i));
+                    gates.add(tempGate);
+                }
+            }
+        } else {
+            for (int i = 0; i < firstExp.getWidth(loopVariableRangeDefinitionLookup) && i < secondExp.getWidth(loopVariableRangeDefinitionLookup); i++) {
+                String lOperandLineName = firstExp.getLineName(i);
+                String rOperandLineName = secondExp.getLineName(i);
+                String resultLineName = additionalLines.getLineName(i);
+
+                Gate lOperandNegGate = new Gate(Toffoli);
+                lOperandNegGate.addTargetLine(lOperandLineName);
+
+                Gate rOperandNegGate = new Gate(Toffoli);
+                rOperandNegGate.addTargetLine(rOperandLineName);
+
+                Gate andGate = new Gate(Toffoli);
+                andGate.addControlLine(lOperandLineName);
+                andGate.addControlLine(rOperandLineName);
+                andGate.addTargetLine(resultLineName);
+
+                Gate andInversionGate = new Gate(Toffoli);
+                andInversionGate.addTargetLine(resultLineName);
+
+                Gate lOperandResetGate = new Gate(Toffoli);
+                lOperandResetGate.addTargetLine(lOperandLineName);
+
+                Gate rOperandResetGate = new Gate(Toffoli);
+                rOperandResetGate.addTargetLine(rOperandLineName);
+
+                gates.add(lOperandNegGate);
+                gates.add(rOperandNegGate);
+                gates.add(andGate);
+                gates.add(andInversionGate);
+                gates.add(lOperandResetGate);
+                gates.add(rOperandResetGate);
+            }
+        }
+        return gates;
+    }
+
     public static ArrayList<Gate> xor(ExpressionResult firstExp, ExpressionResult secondExp, SignalExpression xorLines, Map<String, LoopVariableRangeDefinition> loopVariableRangeDefinitionLookup) {
         ArrayList<Gate> gates = new ArrayList<>();
         if (firstExp.isNumber || secondExp.isNumber) {
